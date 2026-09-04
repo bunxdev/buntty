@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BunTTY</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+  <div class="bar">
+    <span class="bar-brand">BunTTY</span>
+    <span class="bar-sep">|</span>
+    <span class="bar-status off" id="status">Conectando...</span>
+    <div class="bar-users" id="users"></div>
+    <div class="bar-controls">
+      <button class="bar-btn" id="btnControl">Control</button>
+    </div>
+  </div>
+
+  <div id="terminal"></div>
+
+  <div id="overlay" class="active">
+    <h2>BunTTY</h2>
+    <p id="overlayMsg">Conectando al servidor...</p>
+    <div id="overlayBtn" style="display:none">
+      <button onclick="location.reload()">Reconectar</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <script type="module" src="/public/js/app.js"></script>
+</body>
+</html>

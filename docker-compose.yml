@@ -1,0 +1,16 @@
+services:
+  dev:
+    image: debian:bookworm-slim
+    container_name: dev
+    hostname: dev
+    network_mode: "host"
+    working_dir: /scripts
+    volumes:
+      - ./scripts:/scripts
+      - /var/run/docker.sock:/var/run/docker.sock
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    command: ["/bin/bash", "/scripts/main.sh"]
+    restart: unless-stopped
