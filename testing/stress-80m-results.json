@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-08T19:46:45.803Z",
+  "requestedCharacters": 80000000,
+  "rowsGenerated": 500000,
+  "lineCharacters": 158,
+  "browser": "153.0.8010.12",
+  "liveGenerationMs": 18995,
+  "live": {
+    "connections": 1,
+    "closes": 0,
+    "histories": []
+  },
+  "passed": false,
+  "error": "page.waitForFunction: Timeout 45000ms exceeded.",
+  "browserState": {
+    "connections": 35,
+    "closes": 35,
+    "histories": [],
+    "status": "Desconectado"
+  },
+  "peakServerRssMiB": 354
+}

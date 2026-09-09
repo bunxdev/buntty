@@ -8,18 +8,22 @@ export function showToast(text, type = "info", dur = 3000) {
 }
 
 export function updateUI(myId, cid) {
-  const isMe = cid === myId, isAI = cid === 0, t = getTerminal(), s = $("status");
-  s.textContent = isAI ? "AI" : isMe ? "Humano" : "IA";
-  s.className = "bar-status " + (isMe || isAI ? "on" : "off");
-  t.readOnly = !isMe && !isAI; t.element.style.opacity = (isMe || isAI) ? "1" : "0.85";
+  const isMe = myId !== null && cid === myId, isAI = cid === 0, t = getTerminal(), s = $("status");
+  s.textContent = myId === null ? "Desconectado" : isAI ? "IA al control" : isMe ? "Tienes el control" : cid === null ? "Sin controlador" : "Solo lectura";
+  s.className = "bar-status " + (myId !== null ? "on" : "off");
+  t.options.disableStdin = !isMe; t.element.style.opacity = isMe ? "1" : "0.85";
+  $("btnControl").disabled = myId === null;
   $("btnControl").textContent = isMe ? "Soltar" : "Control";
   $("btnControl").className = "bar-btn" + (isMe ? " active" : "");
 }
 
-export function renderUsers(list, myId, released = false) {
-  $("users").innerHTML = list.map(u =>
-    `<span class="user-badge${u.id === 0 ? " ai" : u.id === myId ? " self" : ""}${u.isController ? " controller" : ""}${u.isController && released ? " released" : ""}">${u.id === 0 ? "AI" : u.isController ? "user" : u.id === myId ? "ia" : u.name}</span>`
-  ).join("");
+export function renderUsers(list, myId) {
+  $("users").replaceChildren(...list.map(user => {
+    const badge = document.createElement("span");
+    badge.className = `user-badge${user.id === myId ? " self" : ""}${user.isController ? " controller" : ""}`;
+    badge.textContent = user.id === myId ? `${user.name} (tú)` : user.name;
+    return badge;
+  }));
 }
 
 export function showOverlay(msg, btn = false) {

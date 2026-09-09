@@ -1,0 +1,29 @@
+name: buntty-testing
+services:
+  wetty:
+    image: wettyoss/wetty@sha256:7423b3d40ba25521105bb2796a0de903fd52dee6c20f6983b5ae145e29131aa9
+    container_name: buntty-testing-wetty
+    ports:
+      - "127.0.0.1:3002:3000"
+    command: ["--port", "3000", "--host", "0.0.0.0", "--base", "/", "--command", "/bin/sh"]
+    init: true
+    mem_limit: 512m
+    pids_limit: 128
+    security_opt: ["no-new-privileges:true"]
+  ttyd:
+    image: tsl0922/ttyd@sha256:974d056ecba8d000395a5971123640adf58b3bb300f643ff2abba190a0c19637
+    container_name: buntty-testing-ttyd
+    ports:
+      - "127.0.0.1:3003:7681"
+    command: ["ttyd", "-W", "-O", "sh"]
+    mem_limit: 256m
+    pids_limit: 128
+    security_opt: ["no-new-privileges:true"]
+  tmate:
+    build: ./tmate
+    container_name: buntty-testing-tmate
+    network_mode: none
+    init: true
+    mem_limit: 256m
+    pids_limit: 128
+    security_opt: ["no-new-privileges:true"]

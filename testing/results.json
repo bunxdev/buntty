@@ -1,0 +1,101 @@
+{
+  "date": "2026-09-08T00:27:18.444Z",
+  "checks": [
+    {
+      "name": "buntty: HTTP",
+      "value": 200
+    },
+    {
+      "name": "wetty: HTTP",
+      "value": 200
+    },
+    {
+      "name": "ttyd: HTTP",
+      "value": 200
+    },
+    {
+      "name": "buntty: two clients share output",
+      "value": true
+    },
+    {
+      "name": "buntty: observer WS input blocked",
+      "value": true
+    },
+    {
+      "name": "buntty: unauthenticated API bypasses controller",
+      "value": true
+    },
+    {
+      "name": "buntty: observer can resize PTY",
+      "value": true
+    },
+    {
+      "name": "buntty: control handoff",
+      "value": true
+    },
+    {
+      "name": "buntty: history on reconnect",
+      "value": true
+    },
+    {
+      "name": "buntty: shell survives all clients disconnecting",
+      "value": true
+    },
+    {
+      "name": "buntty: paths isolate shell variables",
+      "value": true
+    },
+    {
+      "name": "wetty: real PTY command",
+      "value": true
+    },
+    {
+      "name": "wetty: PTY resize",
+      "value": true
+    },
+    {
+      "name": "wetty: clients get separate shells by default",
+      "value": true
+    },
+    {
+      "name": "wetty: reconnect creates fresh shell by default",
+      "value": true
+    },
+    {
+      "name": "ttyd: real PTY command",
+      "value": true
+    },
+    {
+      "name": "ttyd: PTY resize",
+      "value": true
+    },
+    {
+      "name": "ttyd: clients get separate shells by default",
+      "value": true
+    },
+    {
+      "name": "ttyd: reconnect creates fresh shell by default",
+      "value": true
+    },
+    {
+      "name": "tmate: detached shell command",
+      "value": true
+    },
+    {
+      "name": "tmate: multiple windows",
+      "value": true
+    },
+    {
+      "name": "tmate: two attached local clients share terminal",
+      "value": true
+    },
+    {
+      "name": "tmate: detached shell state persists",
+      "value": true
+    },
+    {
+      "name": "tmate: remote relay/SSH/web sharing",
+      "value": "NOT TESTED: container network disabled"
+    }
+  ]
+}

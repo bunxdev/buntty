@@ -1,0 +1,96 @@
+{
+  "date": "2026-09-08T19:41:49.612Z",
+  "cases": [
+    {
+      "name": "50000 short lines: all retained",
+      "cols": 226,
+      "rows": 54,
+      "scrollback": 50000,
+      "bufferLength": 50001,
+      "baseY": 49947,
+      "viewportY": 49947,
+      "numberedLines": 50000,
+      "first": 1,
+      "last": 50000,
+      "contiguous": true,
+      "elapsedMs": 10950
+    },
+    {
+      "name": "exact capacity: 50000 history rows plus screen",
+      "cols": 226,
+      "rows": 54,
+      "scrollback": 50000,
+      "bufferLength": 50054,
+      "baseY": 50000,
+      "viewportY": 50000,
+      "numberedLines": 50053,
+      "first": 1,
+      "last": 50053,
+      "contiguous": true
+    },
+    {
+      "name": "60000 short lines: oldest lines evicted at the exact boundary",
+      "cols": 226,
+      "rows": 54,
+      "scrollback": 50000,
+      "bufferLength": 50054,
+      "baseY": 50000,
+      "viewportY": 50000,
+      "numberedLines": 50053,
+      "first": 9948,
+      "last": 60000,
+      "contiguous": true,
+      "elapsedMs": 2057
+    },
+    {
+      "name": "mouse wheel reaches oldest retained line, rendered at scroll top",
+      "first": 9948,
+      "viewportY": 0
+    },
+    {
+      "name": "reload: short-line history restored at the same boundary",
+      "cols": 226,
+      "rows": 54,
+      "scrollback": 50000,
+      "bufferLength": 50054,
+      "baseY": 50000,
+      "viewportY": 50000,
+      "numberedLines": 50053,
+      "first": 9948,
+      "last": 60000,
+      "contiguous": true,
+      "elapsedMs": 582
+    },
+    {
+      "name": "50000 lines of 158 characters: retained while connected",
+      "cols": 226,
+      "rows": 54,
+      "scrollback": 50000,
+      "bufferLength": 50001,
+      "baseY": 49947,
+      "viewportY": 5,
+      "numberedLines": 50000,
+      "first": 1,
+      "last": 50000,
+      "contiguous": true,
+      "elapsedMs": 10432
+    },
+    {
+      "name": "reload: 8000000-character server cap retains all 50000 wide lines",
+      "cols": 226,
+      "rows": 54,
+      "scrollback": 50000,
+      "bufferLength": 50001,
+      "baseY": 49947,
+      "viewportY": 49947,
+      "numberedLines": 50000,
+      "first": 1,
+      "last": 50000,
+      "contiguous": true
+    }
+  ],
+  "target": "http://127.0.0.1:3001",
+  "session": "/scrollback-limit-1788896509613",
+  "browser": "153.0.8010.12",
+  "passed": true
+}

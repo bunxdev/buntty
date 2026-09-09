@@ -14,11 +14,30 @@
     <span class="bar-status off" id="status">Conectando...</span>
     <div class="bar-users" id="users"></div>
     <div class="bar-controls">
+      <button class="bar-btn" id="btnArchive">Historial</button>
       <button class="bar-btn" id="btnControl">Control</button>
     </div>
   </div>
 
   <div id="terminal"></div>
+
+  <dialog id="archive" aria-labelledby="archiveTitle">
+    <div class="archive-bar">
+      <strong id="archiveTitle">Historial de la sesión</strong>
+      <button class="bar-btn" id="archiveClose">Cerrar</button>
+    </div>
+    <div class="archive-bar">
+      <select id="archiveFiles" aria-label="Bloque guardado"></select>
+      <button class="bar-btn" id="archiveOlder">Bloques anteriores</button>
+      <button class="bar-btn" id="archiveRefresh">Actualizar</button>
+    </div>
+    <pre id="archiveContent" tabindex="0" aria-label="Comandos y salida guardados"></pre>
+    <div class="archive-bar">
+      <button class="bar-btn" id="archivePrevious">Página anterior</button>
+      <span id="archiveStatus" role="status"></span>
+      <button class="bar-btn" id="archiveNext">Página siguiente</button>
+    </div>
+  </dialog>
 
   <div id="overlay" class="active">
     <h2>BunTTY</h2>

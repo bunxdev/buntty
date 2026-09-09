@@ -5,8 +5,12 @@ services:
     hostname: dev
     network_mode: "host"
     working_dir: /scripts
+    environment:
+      PORT: "${PORT:-3001}"
+      BUNTTY_LOG_DIR: /logs
     volumes:
       - ./scripts:/scripts
+      - ./logs:/logs
       - /var/run/docker.sock:/var/run/docker.sock
     cap_add:
       - NET_ADMIN

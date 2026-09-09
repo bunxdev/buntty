@@ -1,0 +1,41 @@
+{
+  "date": "2026-09-08T02:05:19.849571+00:00",
+  "server": {
+    "passed": 9,
+    "failed": 0,
+    "assertions": 60
+  },
+  "chromium": {
+    "passed": true,
+    "checks": [
+      "scrollback",
+      "reconnect without duplicates",
+      "control handoff",
+      "literal names",
+      "archive viewer after shell exit"
+    ]
+  },
+  "scrollback": {
+    "passed": true,
+    "emitted_short_lines": 60000,
+    "retained_numbered_lines": 50053,
+    "screen_rows": 54,
+    "retained_first": 9948,
+    "retained_last": 60000
+  },
+  "disk": {
+    "passed": true,
+    "wide_lines": 50000,
+    "first": 1,
+    "last": 50000,
+    "contiguous": true,
+    "files": 8,
+    "max_commands_per_file": 10
+  },
+  "known_limit": "The live terminal restores only 25000 lines of 78 characters after reload; all 50000 remain in disk archives.",
+  "configuration": {
+    "compose_valid": true,
+    "diff_check_passed": true,
+    "live_log_api_responded": true
+  }
+}
