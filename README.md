@@ -48,3 +48,9 @@ BunTTY expone un shell sin autenticacion. El contenedor tambien monta
 `/var/run/docker.sock`, por lo que debe ejecutarse solamente en una maquina y
 red de confianza. No se debe publicar el puerto `3000` directamente en
 Internet.
+
+## Opciones (env)
+
+- `PORT` — puerto del servidor (def 3000). Útil si el 3000 ya está ocupado por un túnel.
+- `BT_COLS` / `BT_ROWS` — tamaño del PTY (def 80x24). Súbelo (p.ej. 220x50) antes de adjuntar un tmux ajeno para no encogerle la vista.
+- `SHELL` — comando a lanzar por sesión (def bash).

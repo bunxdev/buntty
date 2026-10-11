@@ -7,7 +7,7 @@ const appendHistory = (history, output) => (history + output).slice(-MAX_HISTORY
 export function createSession(sessionId, clientId) {
   if (state.sessions.has(sessionId)) return state.sessions.get(sessionId);
   let session = null, pendingHistory = "";
-  const proc = Bun.spawn([process.env.SHELL || "bash"], { terminal: { cols: 80, rows: 24,
+  const proc = Bun.spawn([process.env.SHELL || "bash"], { terminal: { cols: Number(process.env.BT_COLS) || 80, rows: Number(process.env.BT_ROWS) || 24,
     data: (_, d) => { const output = d.toString(); if (!output) return;
       if (!session) return void (pendingHistory = appendHistory(pendingHistory, output));
       session.history = appendHistory(session.history, output); broadcast(sessionId, { type: "output", data: output }); },
