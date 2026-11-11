@@ -38,7 +38,10 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   padding: 0 12px; gap: 12px; border-bottom: 1px solid var(--line); z-index: 50;
   position: fixed; top: 0; left: 0; right: 0;
 }
-.bar-brand { color: var(--accent); font-weight: bold; font-size: 13px; flex-shrink: 0; }
+.bar-brand {
+  color: var(--accent); font-weight: bold; font-size: 13px; flex-shrink: 0;
+  max-width: 18ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .bar-sep { color: #333; }
 .bar-status { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .bar-status.on { color: var(--green); }
@@ -154,7 +157,8 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 }
 #mobileKeys button:active { background: var(--line); color: #fff; }
 #mobileKeys .mod-btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
-body.has-mobile-keys { --keys-h: 44px; }
+/* Include the home-indicator inset so the 44px row of keys is never squeezed */
+body.has-mobile-keys { --keys-h: calc(44px + env(safe-area-inset-bottom, 0px)); }
 
 #dropZone {
   position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0; z-index: 150;
@@ -197,6 +201,11 @@ body.has-mobile-keys { --keys-h: 44px; }
   .bar-btn { padding: 4px 10px; }
   #searchBar { left: 0; border-radius: 0; }
   #searchInput { width: auto; }
+}
+/* Touch: give the bar buttons a usable hit area */
+@media (pointer: coarse) {
+  :root { --bar-h: 44px; }
+  .bar-btn { min-height: 32px; font-size: 12px; }
 }
 @media (min-width: 769px) and (pointer: fine) {
   body.has-mobile-keys { --keys-h: 0px; }

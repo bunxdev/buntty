@@ -4,7 +4,7 @@ let term = null, fitAddon = null, searchAddon = null;
 
 export function createTerminal(el) {
   const themeId = getSavedTheme(), theme = THEMES[themeId] || THEMES.buntty;
-  term = new Terminal({ cursorBlink: true, cursorStyle: "bar", fontSize: 14,
+  term = new Terminal({ cursorBlink: !matchMedia("(prefers-reduced-motion: reduce)").matches, cursorStyle: "bar", fontSize: 14,
     fontFamily: "'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace", theme });
   fitAddon = new FitAddon.FitAddon(); term.loadAddon(fitAddon);
   try { const webgl = new WebglAddon.WebglAddon(); webgl.onContextLoss(() => webgl.dispose()); term.loadAddon(webgl); } catch {}

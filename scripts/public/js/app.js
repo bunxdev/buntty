@@ -11,6 +11,7 @@ const isMinimal = params.get("minimal") === "1";
 
 let myId = null, controllerId = null, justReleased = false, isReadonly = params.get("readonly") === "1";
 let clients = [], sessionOver = false;
+const mods = { ctrl: false, alt: false }; // sticky modifiers from the touch key strip
 
 const refreshUI = () => updateUI(myId, controllerId, isReadonly, clients);
 
@@ -95,7 +96,13 @@ function initSearch() {
   if (isMinimal) {
     document.querySelectorAll("#recIndicator, #btnRec, #btnReplay, #btnTheme, #btnSearch, #btnFiles").forEach((n) => { n.hidden = true; });
   }
-  term.onData((d) => { !isReadonly && controllerId === myId && sendInput(d); });
+  showIdentity();
+  term.onData((d) => {
+    if (isReadonly || controllerId !== myId) return;
+    // Sticky Ctrl/Alt from the touch strip also apply to the soft keyboard
+    if ((mods.ctrl || mods.alt) && d.length === 1) { d = keySequence(d, mods); resetMods(); }
+    sendInput(d);
+  });
   term.onResize(({ cols, rows }) => sendResize(cols, rows));
   window.addEventListener("resize", fitTerminal); new ResizeObserver(fitTerminal).observe(el);
   $("btnControl").onclick = () => {
@@ -112,7 +119,12 @@ function initSearch() {
   initRecording();
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (popups.some((p) => !p.panel.hidden)) { closePopups(); getTerminal().focus(); }
+    const open = popups.find((p) => !p.panel.hidden);
+    if (open) {
+      // Return focus to the trigger when it was inside the popup (WAI-ARIA disclosure)
+      const back = open.panel.contains(document.activeElement) || open.btn === document.activeElement;
+      closePopups(); (back ? open.btn : getTerminal()).focus();
+    }
     else if (!$("searchBar").hidden && document.activeElement !== $("searchInput")) closeSearch();
   });
   connect(() => { fitTerminal(); term.focus(); }, handleMsg, () => {
@@ -120,6 +132,17 @@ function initSearch() {
     $("status").textContent = "Desconectado"; $("status").className = "bar-status off";
   });
 })();
+
+/** Label the pane with the agent name/color (grid panes) and the tab with the session. */
+function showIdentity() {
+  const agent = params.get("agent"), color = params.get("color"), brand = document.querySelector(".bar-brand");
+  if (agent) {
+    brand.textContent = agent;
+    brand.title = params.get("role") || agent;
+    if (/^#[0-9a-f]{3,8}$/i.test(color || "")) brand.style.color = color;
+  }
+  document.title = `${agent || "BunTTY"} · ${sessionId()}`;
+}
 
 function initThemePicker() {
   const list = $("themeList");
@@ -186,17 +209,17 @@ function keySequence(key, mods) {
   return mods.alt ? "\x1b" + seq : seq;
 }
 
+function resetMods() {
+  mods.ctrl = mods.alt = false;
+  document.querySelectorAll("#mobileKeys .mod-btn").forEach((b) => b.setAttribute("aria-pressed", "false"));
+}
+
 function initMobileKeys() {
   const strip = $("mobileKeys");
   if (!("ontouchstart" in window || navigator.maxTouchPoints > 0)) return;
   strip.hidden = false;
   document.body.classList.add("has-mobile-keys");
   fitTerminal();
-  const mods = { ctrl: false, alt: false };
-  const resetMods = () => {
-    mods.ctrl = mods.alt = false;
-    strip.querySelectorAll(".mod-btn").forEach((b) => b.setAttribute("aria-pressed", "false"));
-  };
   strip.addEventListener("mousedown", (e) => e.preventDefault());
   strip.addEventListener("click", (e) => {
     const btn = e.target.closest("button"); if (!btn) return;

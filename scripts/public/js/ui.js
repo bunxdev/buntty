@@ -9,10 +9,9 @@ export function showToast(text, type = "info", dur = 3000) {
 
 export function updateUI(myId, cid, readonly = false, clients = []) {
   const isMe = cid === myId, isAI = cid === 0, t = getTerminal(), s = $("status"), btn = $("btnControl");
-  const p = new URLSearchParams(location.search), agentName = p.get("agent"), agentRole = p.get("role");
   const other = clients.find((c) => c.id === cid);
   s.textContent = readonly ? "Solo lectura"
-    : isMe ? (agentName && agentRole ? `${agentName} — ${agentRole}` : agentName || "Tienes el control")
+    : isMe ? "Tienes el control"
     : isAI ? "Controla la IA"
     : cid == null ? "Nadie tiene el control"
     : `Controla ${other?.name || "otro usuario"}`;

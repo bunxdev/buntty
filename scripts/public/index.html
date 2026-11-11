@@ -16,12 +16,12 @@
     <span class="bar-readonly" id="readonlyBadge" hidden>SOLO LECTURA</span>
     <div class="bar-users" id="users" aria-label="Usuarios conectados"></div>
     <div class="bar-controls">
-      <span class="bar-rec" id="recIndicator" title="Grabando sesión" aria-label="Grabando sesión">&#9679; REC</span>
+      <span class="bar-rec" id="recIndicator" title="Grabando sesión"><span aria-hidden="true">&#9679;</span> REC</span>
       <button type="button" class="bar-btn" id="btnRec" title="Descargar grabación (.cast)">&#x2B07; .cast</button>
       <button type="button" class="bar-btn" id="btnReplay" title="Abrir replay de la sesión">&#x25B6; Replay</button>
-      <button type="button" class="bar-btn" id="btnTheme" title="Tema de color" aria-haspopup="true" aria-expanded="false" aria-controls="themePicker">Tema</button>
+      <button type="button" class="bar-btn" id="btnTheme" title="Tema de color" aria-expanded="false" aria-controls="themePicker">Tema</button>
       <button type="button" class="bar-btn" id="btnSearch" title="Buscar (Ctrl+Shift+F)" aria-expanded="false" aria-controls="searchBar">Buscar</button>
-      <button type="button" class="bar-btn" id="btnFiles" title="Archivos subidos" aria-haspopup="true" aria-expanded="false" aria-controls="filesPanel">Archivos</button>
+      <button type="button" class="bar-btn" id="btnFiles" title="Archivos subidos" aria-expanded="false" aria-controls="filesPanel">Archivos</button>
       <button type="button" class="bar-btn" id="btnControl">Control</button>
     </div>
   </header>
@@ -46,7 +46,7 @@
     <button type="button" id="searchNext" title="Siguiente (Enter)" aria-label="Resultado siguiente">&#9660;</button>
     <button type="button" id="searchClose" title="Cerrar (Esc)" aria-label="Cerrar búsqueda">&times;</button>
   </div>
-  <div id="themePicker" class="popup" aria-label="Temas" hidden>
+  <div id="themePicker" class="popup" role="group" aria-label="Temas" hidden>
     <div class="theme-list" id="themeList"></div>
   </div>
 
@@ -57,7 +57,7 @@
   </div>
 
   <div id="dropZone" hidden>Suelta el archivo para subirlo</div>
-  <div id="filesPanel" class="popup" aria-labelledby="filesTitle" hidden>
+  <div id="filesPanel" class="popup" role="group" aria-labelledby="filesTitle" hidden>
     <div class="files-header"><span id="filesTitle">Archivos subidos</span><button type="button" id="filesClose" aria-label="Cerrar archivos">&times;</button></div>
     <div class="files-list" id="filesList"></div>
   </div>
