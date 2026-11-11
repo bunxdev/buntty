@@ -5,7 +5,7 @@ import { getClientsForSession, broadcastControlChanged } from "./clients.js";
 export function handleStatus(sessionId) {
   const session = state.sessions.get(sessionId);
   return Response.json({ active: !!session, sessionId,
-    clients: getClientsForSession(sessionId).map(c => ({ id: c.id, name: c.name, isController: c.id === session?.controllerId })),
+    clients: getClientsForSession(sessionId).map(c => ({ id: c.id, name: c.name, isController: c.id === session?.controllerId, readonly: !!c.readonly })),
     controller: session?.controllerId ?? null });
 }
 
@@ -15,6 +15,15 @@ export function handleScreen(sessionId) {
   const history = session.history || "";
   const last = history.slice(-4000);
   return Response.json({ sessionId, screen: last });
+}
+
+export function handleDownload(sessionId) {
+  const session = state.sessions.get(sessionId);
+  if (!session) return Response.json({ error: "No active session" }, { status: 400 });
+  const clean = (session.history || "").replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+  return new Response(clean, { headers: {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Content-Disposition": `attachment; filename="buntty-${sessionId.replace(/\//g, "")}-${Date.now()}.log"` } });
 }
 
 export async function handleInput(req, sessionId) {

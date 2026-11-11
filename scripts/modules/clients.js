@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 
-export function addClient(ws, name, sessionId) {
-  const id = state.nextId++, c = { id, name, ws, sessionId };
+export function addClient(ws, name, sessionId, readonly = false) {
+  const id = state.nextId++, c = { id, name, ws, sessionId, readonly };
   state.clients.set(id, c);
   return c;
 }

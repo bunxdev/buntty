@@ -7,14 +7,15 @@ export function showToast(text, type = "info", dur = 3000) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), dur);
 }
 
-export function updateUI(myId, cid) {
+export function updateUI(myId, cid, readonly = false) {
   const isMe = cid === myId, isAI = cid === 0, t = getTerminal(), s = $("status");
   const p = new URLSearchParams(location.search), agentName = p.get("agent"), agentRole = p.get("role");
-  s.textContent = isAI ? "AI" : isMe ? (agentName && agentRole ? `${agentName} — ${agentRole}` : agentName || "Humano") : "IA";
-  s.className = "bar-status " + (isMe || isAI ? "on" : "off");
-  t.readOnly = !isMe && !isAI; t.element.style.opacity = (isMe || isAI) ? "1" : "0.85";
-  $("btnControl").textContent = isMe ? "Soltar" : "Control";
-  $("btnControl").className = "bar-btn" + (isMe ? " active" : "");
+  s.textContent = readonly ? "Viewer" : isAI ? "AI" : isMe ? (agentName && agentRole ? `${agentName} — ${agentRole}` : agentName || "Humano") : "IA";
+  s.className = "bar-status " + (readonly ? "readonly" : (isMe || isAI ? "on" : "off"));
+  t.element.style.opacity = readonly ? "0.9" : (isMe || isAI) ? "1" : "0.85";
+  $("btnControl").textContent = readonly ? "View" : isMe ? "Soltar" : "Control";
+  $("btnControl").className = "bar-btn" + (readonly ? " readonly" : isMe ? " active" : "");
+  if (readonly) $("btnControl").disabled = true;
 }
 
 export function renderUsers(list, myId, released = false) {

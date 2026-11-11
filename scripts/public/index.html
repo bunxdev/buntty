@@ -12,13 +12,21 @@
     <span class="bar-brand">BunTTY</span>
     <span class="bar-sep">|</span>
     <span class="bar-status off" id="status">Conectando...</span>
+    <span class="bar-readonly" id="readonlyBadge" hidden>READ-ONLY</span>
     <div class="bar-users" id="users"></div>
     <div class="bar-controls">
+      <button class="bar-btn" id="btnSearch" title="Ctrl+F">Search</button>
       <button class="bar-btn" id="btnControl">Control</button>
     </div>
   </div>
 
   <div id="terminal"></div>
+  <div id="searchBar" hidden>
+    <input id="searchInput" type="text" placeholder="Search..." spellcheck="false">
+    <button id="searchPrev" title="Previous">&#9650;</button>
+    <button id="searchNext" title="Next">&#9660;</button>
+    <button id="searchClose">&times;</button>
+  </div>
 
   <div id="overlay" class="active">
     <h2>BunTTY</h2>
@@ -32,6 +40,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-webgl@0.18.0/lib/addon-webgl.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-search@0.15.0/lib/addon-search.min.js"></script>
   <script type="module" src="/public/js/app.js"></script>
 </body>
 </html>
