@@ -1,6 +1,7 @@
 services:
   dev:
-    image: debian:bookworm-slim
+    # kalilinux/kali-rolling preferred for security agents (Red/Blue/Purple Team)
+    image: kalilinux/kali-rolling
     container_name: dev
     hostname: dev
     ports:
