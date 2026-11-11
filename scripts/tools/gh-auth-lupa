@@ -4,29 +4,43 @@ L="${LUPA_URL:-http://127.0.0.1:3036}"
 H=(-H "Authorization: Bearer $T" -H "Content-Type: application/json")
 post(){ curl -s -X POST "${H[@]}" "$L/$1" -d "$2"; }
 ev(){ post "live/eval" "{\"script\":\"$1\"}"; }
+wait_for(){ for i in $(seq 1 "$2"); do r=$(ev "$1") && echo "$r" | grep -q "$3" && return 0; sleep 1; done; return 1; }
 
 echo "[1] gh auth login..."
 OUT=$(mktemp)
 echo "y" | gh auth login --hostname github.com --git-protocol https --web 2>&1 > "$OUT" &
 PID=$!; sleep 3
 
-CODE=$(grep -oP '\(\K[A-Z0-9-]+(?=\))' "$OUT"); rm -f "$OUT"
+CODE=$(grep -oE '[A-Z0-9]{4}-[A-Z0-9]{4}' "$OUT"); rm -f "$OUT"
 [ -z "$CODE" ] && echo "error: no code" && kill $PID 2>/dev/null && exit 1
 CC=$(echo "$CODE" | tr -d '-')
 echo "   code: $CODE"
 
 echo "[2] abriendo device page..."
-post "live" '{"url":"https://github.com/login/device"}' >/dev/null; sleep 2
+post "live" '{"url":"https://github.com/login/device"}' >/dev/null
 
 echo "[3] seleccionar cuenta..."
-ev 'const b=document.querySelector("input[type=submit]");b&&b.click()' >/dev/null; sleep 2
+if wait_for 'return location.pathname' 8 'select_account'; then
+  ev 'const b=document.querySelector("input[type=submit]");b&&b.click();return "ok"' >/dev/null
+fi
+
+echo "[4] esperando inputs..."
+wait_for 'return document.querySelectorAll("input[id^=user-code]").length' 10 '[89]' || { echo "error: no code inputs"; kill $PID 2>/dev/null; exit 1; }
 
 echo "[4] llenando $CODE..."
-ev "const c='$CC',ii=document.querySelectorAll('input[id^=user-code]');let j=0;for(let i=0;i<ii.length;i++){if(ii[i].name==='user-code-4')continue;if(j<c.length){Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(ii[i],c[j]);ii[i].dispatchEvent(new Event('input',{bubbles:true}));j++}}" >/dev/null
+ev "const c='$CC',ii=document.querySelectorAll('input[id^=user-code]');let j=0;for(let i=0;i<ii.length;i++){if(ii[i].name==='user-code-4')continue;if(j<c.length){Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(ii[i],c[j]);ii[i].dispatchEvent(new Event('input',{bubbles:true}));j++}}return j" >/dev/null
 
-echo "[5] submit + authorize..."
-ev 'const b=document.querySelector("input[name=commit]");b&&b.click()' >/dev/null; sleep 3
-ev "const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Authorize'));b&&b.click()" >/dev/null; sleep 2
+echo "[5] submit..."
+ev 'const b=document.querySelector("input[name=commit]");b&&b.click();return "ok"' >/dev/null
+
+echo "[5] esperando authorize..."
+wait_for 'return document.title' 10 'Authorize' || { echo "error: no authorize page"; kill $PID 2>/dev/null; exit 1; }
+
+echo "[5] authorize..."
+ev "const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Authorize'));if(b){b.click();return 'ok'}return 'no btn'" >/dev/null
+
+echo "[6] esperando confirmacion..."
+wait_for 'return location.pathname' 10 'success' || echo "warn: no success page detected"
 
 echo "[6] setup git..."
 wait $PID 2>/dev/null
