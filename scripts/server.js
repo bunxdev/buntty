@@ -5,7 +5,7 @@ import { timingSafeEqual, createHash } from "node:crypto";
 import { handleStatus, handleInput, handleTakeControl, handleReleaseControl, handleSessions, handleCreateSession, handleDeleteSession, handleResize, handleUpload, handleScreen, handleDownload, handleUploads, handleFileDownload, handleRecording, handleRecordingStatus } from "./modules/api.js";
 import { MAX_UPLOAD_BYTES } from "./modules/uploads.js";
 import { onOpen, onMessage, onClose } from "./modules/handlers.js";
-import { normalizeSessionId, inside, state } from "./modules/state.js";
+import { normalizeSessionId, inside, state, ensureUploadRoot } from "./modules/state.js";
 import { destroySession } from "./modules/session.js";
 import { getClientsForSession } from "./modules/clients.js";
 import { realpathSync } from "node:fs";
@@ -14,6 +14,7 @@ import { realpath, stat } from "node:fs/promises";
 const agentsConfig = JSON.parse(require("fs").readFileSync("./agents/agents.json", "utf8"));
 const gridRender = pug.compileFile("./views/grid.pug");
 const PORT = Number(process.env.PORT) || 3000;
+try { ensureUploadRoot(); } catch (e) { console.error(`[BunTTY][SEC] Unsafe upload dir: ${e.message}. Refusing to start.`); process.exit(1); }
 
 const TOKEN = process.env.BT_TOKEN || "";
 const VIEW_TOKEN = process.env.BT_VIEW_TOKEN || "";

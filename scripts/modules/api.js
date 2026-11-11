@@ -1,4 +1,4 @@
-import { state, inside } from "./state.js";
+import { state, inside, UPLOAD_ROOT } from "./state.js";
 import { createSession, destroySession, writeToSession, recordEvent, recordingFull, MAX_SESSIONS, MAX_RECORDING_EVENTS, MAX_RECORDING_BYTES } from "./session.js";
 import { getClientsForSession, broadcast, broadcastControlChanged } from "./clients.js";
 import { handOffControl, applySize, announceUpload } from "./handlers.js";
@@ -185,8 +185,10 @@ export async function handleFileDownload(sessionId, fileName) {
   const target = uploadPath(sessionId, fileName);
   if (!target) return Response.json({ error: "Invalid file name" }, { status: 400 });
   // Resolve symlinks: a link created from the shell must not expose files outside the upload dir.
-  const [real, realDir] = await Promise.all([realpath(target.path), realpath(target.dir)]).catch(() => []);
-  const st = real && inside(realDir, real) ? await stat(real).catch(() => null) : null;
+  // The session dir itself must also resolve inside the upload root, or a symlinked session dir
+  // would expose whatever directory it points to (e.g. /etc) to view-only users.
+  const [real, realDir, realRoot] = await Promise.all([realpath(target.path), realpath(target.dir), realpath(UPLOAD_ROOT)]).catch(() => []);
+  const st = real && inside(realRoot, realDir) && inside(realDir, real) ? await stat(real).catch(() => null) : null;
   if (!st?.isFile()) return Response.json({ error: "File not found" }, { status: 404 });
   return new Response(Bun.file(real), { headers: {
     "Content-Disposition": attachment(target.name),

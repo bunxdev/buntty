@@ -1,4 +1,5 @@
 import { resolve, sep } from "node:path";
+import { mkdirSync, lstatSync, chmodSync } from "node:fs";
 
 export const state = {
   sessions: new Map(),
@@ -6,7 +7,15 @@ export const state = {
   nextId: 1,
 };
 
-export const UPLOAD_ROOT = "/tmp/buntty-uploads";
+export const UPLOAD_ROOT = resolve(process.env.BT_UPLOAD_ROOT || "/tmp/buntty-uploads");
+
+export function ensureUploadRoot() {
+  try { mkdirSync(UPLOAD_ROOT, { recursive: true, mode: 0o700 }); } catch (e) { if (e.code !== "EEXIST") throw e; }
+  const st = lstatSync(UPLOAD_ROOT);
+  if (!st.isDirectory() || (process.getuid && st.uid !== process.getuid()))
+    throw new Error(`${UPLOAD_ROOT} is a symlink or not owned by this user`);
+  chmodSync(UPLOAD_ROOT, 0o700);
+}
 const SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,63}$/;
 
 export function normalizeSessionId(value = "/") {
