@@ -21,10 +21,12 @@ export const recordingFull = (s) => s.recording.length >= MAX_RECORDING_EVENTS |
 
 export function createSession(sessionId, clientId) {
   if (state.sessions.has(sessionId)) return state.sessions.get(sessionId);
+  // Streaming decoder: a multi-byte UTF-8 char split across PTY chunks must not become U+FFFD.
   let session = null, pendingHistory = "";
+  const decoder = new TextDecoder();
   const cols = Number(process.env.BT_COLS) || 80, rows = Number(process.env.BT_ROWS) || 24;
   const proc = Bun.spawn([process.env.SHELL || "bash"], { terminal: { cols, rows,
-    data: (_, d) => { const output = d.toString(); if (!output) return;
+    data: (_, d) => { const output = decoder.decode(d, { stream: true }); if (!output) return;
       if (!session) return void (pendingHistory = appendHistory(pendingHistory, output));
       session.history = appendHistory(session.history, output);
       recordEvent(session, "o", output);
