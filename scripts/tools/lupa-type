@@ -1,5 +1,3 @@
 #!/bin/bash
-T="${LUPA_API_TOKEN:?set LUPA_API_TOKEN}"
-L="${LUPA_URL:-http://127.0.0.1:3036}"
-H=(-H "Authorization: Bearer $T" -H "Content-Type: application/json")
-[ "$1" = "--key" ] && curl -s -X POST "${H[@]}" "$L/live/key" -d "{\"key\":\"$2\"}" || curl -s -X POST "${H[@]}" "$L/live/type" -d "{\"text\":\"$1\"}"
+. "$(dirname "$(readlink -f "$0")")/_lupa.sh"
+if [ "$1" = "--key" ]; then post "live/key" "{\"key\":$(jstr "$2")}"; else post "live/type" "{\"text\":$(jstr "$1")}"; fi

@@ -1,7 +1,4 @@
 #!/bin/bash
-T="${LUPA_API_TOKEN:?set LUPA_API_TOKEN}"
-L="${LUPA_URL:-http://127.0.0.1:3036}"
+. "$(dirname "$(readlink -f "$0")")/_lupa.sh"
 [ -z "$1" ] && echo "uso: lupa-eval \"return document.title\"" && exit 1
-S=$([ "$1" = "-f" ] && cat "$2" || echo "$1")
-J=$(printf '%s' "$S" | jq -Rs .)
-curl -s -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" "$L/live/eval" -d "{\"script\":$J}"
+if [ "$1" = "-f" ]; then ev "$(cat "$2")"; else ev "$1"; fi

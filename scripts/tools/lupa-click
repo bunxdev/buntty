@@ -1,7 +1,9 @@
 #!/bin/bash
-T="${LUPA_API_TOKEN:?set LUPA_API_TOKEN}"
-L="${LUPA_URL:-http://127.0.0.1:3036}"
-H=(-H "Authorization: Bearer $T" -H "Content-Type: application/json")
-[ "$1" = "--xy" ] && curl -s -X POST "${H[@]}" "$L/live/mouse-click" -d "{\"x\":$2,\"y\":$3}" && exit
-[ "$1" = "--text" ] && curl -s -X POST "${H[@]}" "$L/live/eval" -d "{\"script\":\"const e=Array.from(document.querySelectorAll('a,button,input[type=submit]')).find(e=>(e.textContent||e.value).includes('$2'));e?e.click():'not found'\"}" && exit
-curl -s -X POST "${H[@]}" "$L/live/click" -d "{\"selector\":\"$1\"}"
+. "$(dirname "$(readlink -f "$0")")/_lupa.sh"
+num='^-?[0-9]+(\.[0-9]+)?$'
+if [ "$1" = "--xy" ]; then
+  [[ "$2" =~ $num && "$3" =~ $num ]] || { echo "uso: lupa-click --xy <x> <y>"; exit 1; }
+  post "live/mouse-click" "{\"x\":$2,\"y\":$3}"; exit
+fi
+[ "$1" = "--text" ] && { ev "const t=$(jstr "$2");const e=Array.from(document.querySelectorAll('a,button,input[type=submit]')).find(e=>(e.textContent||e.value||'').includes(t));return e?(e.click(),'ok'):'not found'"; exit; }
+post "live/click" "{\"selector\":$(jstr "$1")}"

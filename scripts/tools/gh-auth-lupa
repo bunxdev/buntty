@@ -1,9 +1,5 @@
 #!/bin/bash
-T="${LUPA_API_TOKEN:?set LUPA_API_TOKEN}"
-L="${LUPA_URL:-http://127.0.0.1:3036}"
-H=(-H "Authorization: Bearer $T" -H "Content-Type: application/json")
-post(){ curl -s -X POST "${H[@]}" "$L/$1" -d "$2"; }
-ev(){ post "live/eval" "{\"script\":\"$1\"}"; }
+. "$(dirname "$(readlink -f "$0")")/_lupa.sh"
 wait_for(){ for i in $(seq 1 "$2"); do r=$(ev "$1") && echo "$r" | grep -q "$3" && return 0; sleep 1; done; return 1; }
 
 echo "[1] gh auth login..."

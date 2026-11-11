@@ -1,7 +1,9 @@
 #!/bin/bash
-T="${LUPA_API_TOKEN:?set LUPA_API_TOKEN}"
-L="${LUPA_URL:-http://127.0.0.1:3036}"
+. "$(dirname "$(readlink -f "$0")")/_lupa.sh"
 O="${2:-shot-$(date +%s).png}"
-[ -z "$1" ] && curl -s -X POST -H "Authorization: Bearer $T" "$L/live/screenshot" -o "$O" || \
-curl -s -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" "$L/screenshot" -d "{\"url\":\"$1\",\"format\":\"png\"}" -o "$O"
+if [ -z "$1" ]; then curl -s -X POST -H "Authorization: Bearer $T" "$L/live/screenshot" -o "$O"
+else
+  [[ "$1" =~ ^https?:// ]] || { echo "error: solo URLs http(s)"; exit 1; }
+  post "screenshot" "{\"url\":$(jstr "$1"),\"format\":\"png\"}" -o "$O"
+fi
 echo "$O ($(du -h "$O"|cut -f1))"

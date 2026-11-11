@@ -1,7 +1,5 @@
 #!/bin/bash
-T="${LUPA_API_TOKEN:?set LUPA_API_TOKEN}"
-L="${LUPA_URL:-http://127.0.0.1:3036}"
-H=(-H "Authorization: Bearer $T" -H "Content-Type: application/json")
+. "$(dirname "$(readlink -f "$0")")/_lupa.sh"
 curl -s -H "Authorization: Bearer $T" "$L/live/status"
 echo ""
-curl -s -X POST "${H[@]}" "$L/live/eval" -d '{"script":"return {title:document.title,url:location.href,forms:document.forms.length,links:document.links.length}"}'
+ev 'return {title:document.title,url:location.href,forms:document.forms.length,links:document.links.length}'
