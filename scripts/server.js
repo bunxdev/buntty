@@ -108,6 +108,8 @@ const secLog = (event, req, ip, extra = "") =>
 
 const AUTH_FAIL_LIMIT = 20, AUTH_FAIL_WINDOW = 5 * 60_000, authFails = new Map();
 const authBlocked = (ip) => { const b = authFails.get(ip); return !!b && Date.now() - b.start < AUTH_FAIL_WINDOW && b.count >= AUTH_FAIL_LIMIT; };
+// Log a blocked IP once per window, so a brute-force run can't flood the logs.
+const firstBlock = (ip) => { const b = authFails.get(ip); return b && !b.logged ? (b.logged = true) : false; };
 const noteAuthFail = (ip) => {
   const now = Date.now(), b = authFails.get(ip);
   if (!b && authFails.size >= 10_000) authFails.delete(authFails.keys().next().value); // bound memory
@@ -154,7 +156,9 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
       return sec(await f.exists() ? new Response(f) : new Response("Not Found", { status: 404 }));
     }
     if (u.pathname === "/replay") return sec(html(Bun.file("./public/replay.html")));
-    if (authBlocked(ip)) return secLog("auth_rate_limited", req, ip), deny("Too Many Requests", 429, u.pathname);
+    if (u.pathname === "/logout") return sec(new Response("Logged out\n", { headers: { "Content-Type": "text/plain", "Cache-Control": "no-store",
+      "Set-Cookie": `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict${tlsOpts ? "; Secure" : ""}` } }));
+    if (authBlocked(ip)) return firstBlock(ip) && secLog("auth_rate_limited", req, ip, `fails>=${AUTH_FAIL_LIMIT}`), deny("Too Many Requests", 429, u.pathname);
     const role = getRole(req, u);
     if (!role) return noteAuthFail(ip), secLog("auth_failed", req, ip), deny("Unauthorized", 401, u.pathname);
     if (sessionId === null && (u.pathname === "/ws" || isApi(u.pathname))) return secLog("bad_session", req, ip), deny("Invalid session", 400, u.pathname);
@@ -172,6 +176,7 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
     if (req.method === "GET" && u.searchParams.has("token") && !isApi(u.pathname)) {
       u.searchParams.delete("token");
       const secure = tlsOpts ? "; Secure" : "";
+      if (TOKEN || VIEW_TOKEN) secLog("auth_login", req, ip, `role=${role}`);
       return sec(new Response(null, { status: 302, headers: {
         Location: u.pathname.replace(/^\/+/, "/") + (u.search || ""),
         "Set-Cookie": `${COOKIE}=${encodeURIComponent(presentedToken(req, new URL(req.url)))}; Path=/; HttpOnly; SameSite=Strict${secure}` } }));
@@ -184,7 +189,7 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
       if (path === "/api" && (req.method === "GET" || req.method === "HEAD")) r = apiIndex(role);
       else if (!route) r = json({ error: "Not found" }, 404);
       else if (!h) r = new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { "Content-Type": "application/json", Allow: allowed(route) } });
-      else if (needsFull(route, req.method) && role !== "full") r = deny("Requires a full-access token", 403, u.pathname);
+      else if (needsFull(route, req.method) && role !== "full") secLog("forbidden_role", req, ip, `role=${role}`), r = deny("Requires a full-access token", 403, u.pathname);
       else if (Number(req.headers.get("content-length")) > (route._body ?? API_BODY_LIMIT)) r = json({ error: "Request body too large" }, 413);
       else {
         if (req.method !== "GET" && req.method !== "HEAD") secLog("api_" + u.pathname.slice(5).replace(/\W/g, "_"), req, ip, `role=${role} session=${logSafe(sessionId)}`);

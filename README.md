@@ -113,6 +113,14 @@ LAN, añade ese origen con `BT_KALI_FRAME_ANCESTORS="http://<host>:3000 ..."`.
   grabaciones. El parametro `?readonly=1` es solo cosmetico y **no** es un
   control de seguridad.
 - La comparacion de tokens es de tiempo constante.
+- `GET /logout` borra la cookie de sesion.
+- Tras 20 fallos de autenticacion en 5 min, la IP recibe `429` durante la ventana.
+
+**Auditoria.** Las lineas `[BunTTY][SEC]` registran: `auth_login`,
+`auth_failed`, `auth_rate_limited` (una vez por IP y ventana),
+`forbidden_role` (token de lectura intentando una ruta de escritura),
+`forbidden_source`/`forbidden_host`/`forbidden_origin`, y cada `POST` a la API.
+Los valores se sanean (sin caracteres de control) para evitar inyeccion en logs.
 
 **Proteccion cross-site (sin token).** Sin `BT_TOKEN`, cualquier pagina web
 que visites podria intentar hablar con `localhost:3000`. Para evitarlo:
