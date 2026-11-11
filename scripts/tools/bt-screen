@@ -2,4 +2,4 @@
 B="${BUNTTY_URL:-http://localhost:3000}"
 A=(); [ -n "${BT_TOKEN:-}" ] && A=(-H "Authorization: Bearer $BT_TOKEN")
 S="${1:-1}"
-[ "$2" = "--raw" ] && curl -s "${A[@]}" "$B/api/screen?session=%2F$S" | python3 -c "import sys,json;print(json.load(sys.stdin).get('screen',''))" || curl -s "${A[@]}" "$B/api/screen?session=%2F$S"
+[ "$2" = "--raw" ] && curl -s "${A[@]}" "$B/api/screen?session=%2F$S&strip=1" | python3 -c "import sys,json;print(json.load(sys.stdin).get('screen',''))" || curl -s "${A[@]}" "$B/api/screen?session=%2F$S"

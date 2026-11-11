@@ -2,4 +2,6 @@
 B="${BUNTTY_URL:-http://localhost:3000}"
 A=(); [ -n "${BT_TOKEN:-}" ] && A=(-H "Authorization: Bearer $BT_TOKEN")
 [ -z "$2" ] && echo "uso: bt-send <1-6> <comando>" && exit 1
+# Idempotent: spawns the shell if no browser has opened this session yet.
+curl -s "${A[@]}" -X POST "$B/api/sessions?session=%2F$1" -o /dev/null
 curl -s "${A[@]}" -X POST -H "Content-Type: application/json" "$B/api/input?session=%2F$1" -d "$(/root/.bun/bin/bun -e 'console.log(JSON.stringify({data: process.argv[1] + "\n"}))' "$2")"

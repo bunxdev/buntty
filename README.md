@@ -43,6 +43,7 @@ La sesion raiz se usa cuando no se especifica `session`. Para controlar otra
 ruta, se envia su valor codificado en la consulta:
 
 ```bash
+curl -X POST 'http://localhost:3000/api/sessions?session=%2F1'   # crea el shell si no existe
 curl 'http://localhost:3000/api/status?session=%2F1'
 curl -X POST 'http://localhost:3000/api/take-control?session=%2F1'
 curl -X POST 'http://localhost:3000/api/input?session=%2F1' \
@@ -51,9 +52,15 @@ curl -X POST 'http://localhost:3000/api/input?session=%2F1' \
 curl -X POST 'http://localhost:3000/api/release-control?session=%2F1'
 ```
 
+`GET /api` devuelve la lista de rutas, metodos y cuales requieren el token completo.
+
 Endpoints adicionales:
 
 - `GET /api/sessions` — lista las sesiones vivas (id, pid, controlador, clientes, tamaño)
+- `POST /api/sessions?session=` — crea la sesion sin abrir el navegador; idempotente (201 si la crea, 200 si ya existia, 503 al llegar a `BT_MAX_SESSIONS`)
+- `DELETE /api/sessions?session=` — mata el shell; los clientes conectados reciben `session_ended`
+- `POST /api/resize?session=` con `{"cols":120,"rows":40}` — tamaño del PTY (409 si un usuario tiene el control: usa `take-control` antes)
+- `POST /api/upload?session=&name=archivo` — sube el cuerpo crudo (`curl --data-binary @archivo`), max 10MB
 - `GET /api/screen?session=&strip=1&chars=4000` — últimos `chars` caracteres de salida; `strip=1` quita códigos ANSI
 - `POST /api/release-control?session=` — devuelve el control al primer usuario conectado tras `take-control` (409 si la API no lo tiene)
 - `GET /api/download?session=` — descarga del log
@@ -64,8 +71,10 @@ Endpoints adicionales:
 - `GET /replay?session=` — web replay player
 
 Con token: `Authorization: Bearer <BT_TOKEN>`. `BT_VIEW_TOKEN` solo permite lectura
-(`input`, `take-control`, `release-control` y `recording` devuelven 403).
-Todos los errores de `/api/*` responden JSON `{ "error": "..." }`.
+(`input`, `resize`, `upload`, `take-control`, `release-control`, `recording`,
+`POST`/`DELETE /api/sessions` devuelven 403).
+Todos los errores de `/api/*` responden JSON `{ "error": "..." }`. Cuerpos JSON
+limitados a 1MB y uploads a 10MB (413).
 
 Los archivos subidos van a `/tmp/buntty-uploads/<sesion>/`, con `/` como `+`
 (`/1` → `1`, `/a/b` → `a+b`, la raíz → `+root`).
