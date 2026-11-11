@@ -23,51 +23,61 @@
       text-decoration: none; display: inline-block;
     }
     .header .btn:hover { background: #2a2a3e; color: #fff; border-color: #555; }
+    .header .btn[hidden] { display: none; }
+    .header .btn:focus-visible { outline: 2px solid #3498db; outline-offset: 1px; }
     #player-container {
-      width: 100%; height: calc(100vh - 40px); padding: 20px;
+      width: 100%; height: calc(100dvh - 40px); padding: 20px; overflow: auto;
       display: flex; justify-content: center; align-items: center;
     }
     #player-container .ap-wrapper { width: 100% !important; max-width: 960px; height: 100% !important; }
     .no-session {
-      text-align: center; color: #888; font-size: 14px;
+      text-align: center; color: #8a8aa0; font-size: 14px; line-height: 1.6; padding: 16px;
     }
     .no-session code { color: #3498db; background: #1a1a2e; padding: 2px 8px; border-radius: 3px; }
+    @media (max-width: 600px) {
+      .header { padding: 0 8px; gap: 8px; }
+      .header .sep, .header .title { display: none; }
+      #player-container { padding: 8px; }
+    }
   </style>
 </head>
 <body>
-  <div class="header">
+  <header class="header">
     <span class="brand">BunTTY</span>
-    <span class="sep">|</span>
+    <span class="sep" aria-hidden="true">|</span>
     <span class="title">Replay</span>
     <span class="session" id="sessionLabel"></span>
-    <div class="actions">
-      <a class="btn" id="downloadBtn" title="Download .cast file">Download .cast</a>
-      <a class="btn" href="/" id="backBtn">Back to terminal</a>
-    </div>
-  </div>
-  <div id="player-container"></div>
+    <nav class="actions">
+      <a class="btn" id="downloadBtn" title="Descargar archivo .cast" download>Descargar .cast</a>
+      <a class="btn" href="/" id="backBtn">Volver al terminal</a>
+    </nav>
+  </header>
+  <main id="player-container"><p class="no-session" role="status">Cargando grabación...</p></main>
   <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.min.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
-    const session = params.get("session") || "/1";
+    const token = params.get("token");
+    const withToken = (url) => token ? url + (url.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(token) : url;
+    const session = params.get("session") || "/";
     document.getElementById("sessionLabel").textContent = session;
-    const castUrl = `/api/recording?session=${encodeURIComponent(session)}`;
+    const castUrl = withToken(`/api/recording?session=${encodeURIComponent(session)}`);
     document.getElementById("downloadBtn").href = castUrl;
-    document.getElementById("backBtn").href = session;
+    // Only allow same-origin relative paths for the back link.
+    document.getElementById("backBtn").href = withToken(session.startsWith("/") && !session.startsWith("//") ? session : "/");
 
     const container = document.getElementById("player-container");
-    try {
-      AsciinemaPlayer.create(castUrl, container, {
-        theme: "monokai",
-        fit: "width",
-        autoPlay: true,
-        speed: 1,
-        idleTimeLimit: 3,
-        poster: "npt:0:01",
+    const showEmpty = () => {
+      container.innerHTML = '<div class="no-session" role="status">No hay grabación disponible para esta sesión.<br>Escribe algo en el terminal para generar una.<br><br>Uso: <code>/replay?session=/1</code></div>';
+      document.getElementById("downloadBtn").hidden = true;
+    };
+    // Fetch first: AsciinemaPlayer loads URLs asynchronously, so a 400/404 would never reach a try/catch.
+    fetch(castUrl).then((res) => res.ok ? res.text() : Promise.reject(res.status)).then((data) => {
+      if (!data.trim()) return showEmpty();
+      container.replaceChildren();
+      AsciinemaPlayer.create({ data }, container, {
+        theme: "monokai", fit: "width", autoPlay: true, speed: 1, idleTimeLimit: 3, poster: "npt:0:01",
       });
-    } catch (e) {
-      container.innerHTML = '<div class="no-session">No recording available for this session.<br>Start typing in the terminal to generate a recording.<br><br>Usage: <code>/replay?session=/1</code></div>';
-    }
+    }).catch(showEmpty);
   </script>
 </body>
 </html>

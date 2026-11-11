@@ -1,15 +1,33 @@
 let ws = null, cb = null;
 
+const pageParams = new URLSearchParams(location.search);
+
+/** Current session id, derived from the URL path ("/1", "/" ...). */
+export const sessionId = () => location.pathname.replace(/\/+$/, "") || "/";
+
+/** Append ?token= (when the page was opened with one) so API calls pass BT_TOKEN auth. */
+export function withToken(url) {
+  const token = pageParams.get("token");
+  if (!token) return url;
+  return url + (url.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(token);
+}
+
 export function connect(onOpen, onMessage, onClose) {
   const p = location.protocol === "https:" ? "wss:" : "ws:",
-    params = new URLSearchParams(location.search),
     savedName = (() => { try { return localStorage.getItem("buntty_name"); } catch { return null; } })(),
-    n = params.get("agent") || savedName || "User" + Math.floor(Math.random() * 9000 + 1000),
-    session = location.pathname.replace(/\/+$/, "") || "/";
-  try { localStorage.setItem("buntty_name", n); } catch {} cb = onMessage;
-  ws = new WebSocket(`${p}//${location.host}/ws?name=${encodeURIComponent(n)}&session=${encodeURIComponent(session)}`);
+    n = pageParams.get("agent") || savedName || "User" + Math.floor(Math.random() * 9000 + 1000);
+  try { localStorage.setItem("buntty_name", n); } catch {}
+  cb = onMessage;
+  const q = new URLSearchParams({ name: n, session: sessionId() });
+  if (pageParams.get("readonly") === "1") q.set("readonly", "1");
+  ws = new WebSocket(withToken(`${p}//${location.host}/ws?${q}`));
   ws.onopen = onOpen;
-  ws.onmessage = (e) => { const r = typeof e.data === "string" ? e.data : ""; try { cb(JSON.parse(r), null); } catch { cb(null, r); } };
+  ws.onmessage = (e) => {
+    const r = typeof e.data === "string" ? e.data : "";
+    let msg;
+    try { msg = JSON.parse(r); } catch { return cb(null, r); }
+    cb(msg, null);
+  };
   ws.onclose = onClose;
 }
 

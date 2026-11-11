@@ -2,67 +2,66 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#111122">
   <title>BunTTY</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
   <link rel="stylesheet" href="/public/css/style.css">
 </head>
 <body>
-  <div class="bar">
+  <header class="bar">
     <span class="bar-brand">BunTTY</span>
-    <span class="bar-sep">|</span>
-    <span class="bar-status off" id="status">Conectando...</span>
-    <span class="bar-readonly" id="readonlyBadge" hidden>READ-ONLY</span>
-    <div class="bar-users" id="users"></div>
+    <span class="bar-sep" aria-hidden="true">|</span>
+    <span class="bar-status off" id="status" role="status" aria-live="polite">Conectando...</span>
+    <span class="bar-readonly" id="readonlyBadge" hidden>SOLO LECTURA</span>
+    <div class="bar-users" id="users" aria-label="Usuarios conectados"></div>
     <div class="bar-controls">
-      <span class="bar-rec" id="recIndicator" title="Recording">&#9679; REC</span>
-      <button class="bar-btn" id="btnRec" title="Download recording (.cast)">&#x2B07; .cast</button>
-      <button class="bar-btn" id="btnReplay" title="Open session replay">&#x25B6; Replay</button>
-      <button class="bar-btn" id="btnTheme" title="Theme">Theme</button>
-      <button class="bar-btn" id="btnSearch" title="Ctrl+F">Search</button>
-      <button class="bar-btn" id="btnFiles" title="Uploaded files">Files</button>
-      <button class="bar-btn" id="btnControl">Control</button>
+      <span class="bar-rec" id="recIndicator" title="Grabando sesión" aria-label="Grabando sesión">&#9679; REC</span>
+      <button type="button" class="bar-btn" id="btnRec" title="Descargar grabación (.cast)">&#x2B07; .cast</button>
+      <button type="button" class="bar-btn" id="btnReplay" title="Abrir replay de la sesión">&#x25B6; Replay</button>
+      <button type="button" class="bar-btn" id="btnTheme" title="Tema de color" aria-haspopup="true" aria-expanded="false" aria-controls="themePicker">Tema</button>
+      <button type="button" class="bar-btn" id="btnSearch" title="Buscar (Ctrl+Shift+F)" aria-expanded="false" aria-controls="searchBar">Buscar</button>
+      <button type="button" class="bar-btn" id="btnFiles" title="Archivos subidos" aria-haspopup="true" aria-expanded="false" aria-controls="filesPanel">Archivos</button>
+      <button type="button" class="bar-btn" id="btnControl">Control</button>
     </div>
-  </div>
+  </header>
 
-  <div id="terminal"></div>
-  <div id="mobileKeys" hidden>
-    <button data-key="Escape">Esc</button>
-    <button data-mod="ctrl" class="mod-btn">Ctrl</button>
-    <button data-mod="alt" class="mod-btn">Alt</button>
-    <button data-key="Tab">Tab</button>
-    <button data-key="ArrowUp">&uarr;</button>
-    <button data-key="ArrowDown">&darr;</button>
-    <button data-key="ArrowLeft">&larr;</button>
-    <button data-key="ArrowRight">&rarr;</button>
-    <button data-key="/">/</button>
-    <button data-key="-">-</button>
-    <button data-key="|">|</button>
+  <main id="terminal" aria-label="Terminal"></main>
+  <div id="mobileKeys" role="toolbar" aria-label="Teclas especiales" hidden>
+    <button type="button" data-key="Escape">Esc</button>
+    <button type="button" data-mod="ctrl" class="mod-btn" aria-pressed="false">Ctrl</button>
+    <button type="button" data-mod="alt" class="mod-btn" aria-pressed="false">Alt</button>
+    <button type="button" data-key="Tab">Tab</button>
+    <button type="button" data-key="ArrowUp" aria-label="Flecha arriba">&uarr;</button>
+    <button type="button" data-key="ArrowDown" aria-label="Flecha abajo">&darr;</button>
+    <button type="button" data-key="ArrowLeft" aria-label="Flecha izquierda">&larr;</button>
+    <button type="button" data-key="ArrowRight" aria-label="Flecha derecha">&rarr;</button>
+    <button type="button" data-key="/">/</button>
+    <button type="button" data-key="-">-</button>
+    <button type="button" data-key="|">|</button>
   </div>
-  <div id="searchBar" hidden>
-    <input id="searchInput" type="text" placeholder="Search..." spellcheck="false">
-    <button id="searchPrev" title="Previous">&#9650;</button>
-    <button id="searchNext" title="Next">&#9660;</button>
-    <button id="searchClose">&times;</button>
+  <div id="searchBar" role="search" hidden>
+    <input id="searchInput" type="search" placeholder="Buscar..." aria-label="Buscar en el terminal" spellcheck="false" autocomplete="off">
+    <button type="button" id="searchPrev" title="Anterior (Shift+Enter)" aria-label="Resultado anterior">&#9650;</button>
+    <button type="button" id="searchNext" title="Siguiente (Enter)" aria-label="Resultado siguiente">&#9660;</button>
+    <button type="button" id="searchClose" title="Cerrar (Esc)" aria-label="Cerrar búsqueda">&times;</button>
   </div>
-  <div id="themePicker" hidden>
+  <div id="themePicker" class="popup" aria-label="Temas" hidden>
     <div class="theme-list" id="themeList"></div>
   </div>
 
-  <div id="overlay" class="active">
-    <h2>BunTTY</h2>
+  <div id="overlay" class="active" role="alertdialog" aria-modal="true" aria-labelledby="overlayTitle" aria-describedby="overlayMsg">
+    <h2 id="overlayTitle">BunTTY</h2>
     <p id="overlayMsg">Conectando al servidor...</p>
-    <div id="overlayBtn" style="display:none">
-      <button onclick="location.reload()">Reconectar</button>
-    </div>
+    <button type="button" id="overlayBtn" hidden>Reconectar</button>
   </div>
 
-  <div id="dropZone" hidden>Drop file to upload</div>
-  <div id="filesPanel" hidden>
-    <div class="files-header">Uploaded Files<button id="filesClose">&times;</button></div>
+  <div id="dropZone" hidden>Suelta el archivo para subirlo</div>
+  <div id="filesPanel" class="popup" aria-labelledby="filesTitle" hidden>
+    <div class="files-header"><span id="filesTitle">Archivos subidos</span><button type="button" id="filesClose" aria-label="Cerrar archivos">&times;</button></div>
     <div class="files-list" id="filesList"></div>
   </div>
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>

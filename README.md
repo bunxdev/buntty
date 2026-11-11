@@ -14,7 +14,7 @@ contenido del terminal.
 
 | Version | Features |
 |---------|----------|
-| v5.0 | Auth (`BT_TOKEN`), TLS, readonly mode, download log, WebGL renderer, search (Ctrl+F), grid NxM |
+| v5.0 | Auth (`BT_TOKEN`), TLS, readonly mode, download log, WebGL renderer, search (Ctrl+Shift+F), grid NxM |
 | v5.1 | 7 themes + picker, mobile keys (touch), Sixel images |
 | v5.2 | File transfer (drag-drop + API), Files panel, CSP headers (`BT_FRAME_ANCESTORS`), security headers |
 | v5.3 | Session recording (asciinema v2 `.cast`), web replay player, REC indicator, grid minimal mode |
