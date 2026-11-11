@@ -79,6 +79,20 @@ BunTTY expone un **shell root** y el contenedor monta `/var/run/docker.sock`
 `127.0.0.1`. Para exponerlos en la LAN, define `BT_BIND=0.0.0.0` **y** un
 `BT_TOKEN`.
 
+Sin token, el servidor ademas rechaza IPs de origen publicas (solo loopback y
+rangos privados: `10/8`, `172.16/12`, `192.168/16`, `fc00::/7`, link-local).
+Esto **no** protege frente a la LAN: un equipo en `192.168.x.x` es "privado".
+En Docker Desktop (macOS/Windows) todas las conexiones llegan desde la IP del
+gateway de la VM, asi que este filtro no distingue clientes. El control real es
+`BT_BIND=127.0.0.1` (por defecto) o un `BT_TOKEN`. `BT_INSECURE_ANY_IP=1`
+desactiva el filtro; no lo uses sin token.
+
+Si Lupa u otro contenedor necesita entrar por `host.docker.internal`, usa
+`BT_BIND=0.0.0.0` **con** `BT_TOKEN` en `.env`; el grid pasa el token a los
+iframes. Kali solo se deja enmarcar por el grid de `:3000` (`BT_FRAME_ANCESTORS`
+en `docker-compose.yml`); nunca uses `*`, porque cualquier web podria
+enmarcar un shell root (clickjacking).
+
 **Autenticacion.**
 
 - `BT_TOKEN`: acceso completo. Se acepta como `Authorization: Bearer <token>`,
@@ -137,6 +151,8 @@ el historial de git, asi que **hay que rotarlo**.
 - `BT_ALLOWED_ORIGINS` — origenes extra aceptados para WS/POST (coma-separados)
 - `BT_MAX_SESSIONS` — maximo de sesiones/shells simultaneos (def 50)
 - `BT_BIND` — IP donde Docker publica los puertos (def `127.0.0.1`)
+- `BT_INSECURE_ANY_IP` — `1` permite IPs publicas sin token (no recomendado)
+- `LUPA_API_TOKEN` / `LUPA_URL` — credenciales de las herramientas `scripts/tools/lupa-*`
 - `BT_TLS_CERT` / `BT_TLS_KEY` — certificados TLS
 - `BT_COLS` / `BT_ROWS` — tamaño del PTY (def 80x24)
 - `BT_FRAME_ANCESTORS` — CSP frame-ancestors (def `'self'`)
