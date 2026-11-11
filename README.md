@@ -161,6 +161,16 @@ que visites podria intentar hablar con `localhost:3000`. Para evitarlo:
 contraseñas escritas en prompts como `sudo`. Por eso solo se pueden descargar
 con acceso completo.
 
+**Tokens en las shells.** Las shells no heredan `BT_TOKEN` ni `BT_VIEW_TOKEN`:
+un `env` quedaria en el historial que leen los usuarios de solo lectura. El
+token completo esta en un archivo 0600 cuya ruta es `$BT_TOKEN_FILE`;
+`ai.sh`, `bt-send` y `bt-screen` lo leen de ahi. No lo imprimas en una sesion
+que vean otros.
+
+**Cookies y puertos.** Las cookies no se aislan por puerto: cualquier servicio
+en otro puerto de `localhost` recibe `bt_auth_<puerto>`. No abras servicios
+no confiables en el mismo host/navegador, o usa `Authorization: Bearer`.
+
 **Secretos.** Los scripts de `scripts/tools/` ya no traen un token de Lupa por
 defecto: necesitan `LUPA_API_TOKEN`. El token que estaba hardcodeado sigue en
 el historial de git, asi que **hay que rotarlo**.
@@ -182,5 +192,6 @@ el historial de git, asi que **hay que rotarlo**.
 - `BT_TLS_CERT` / `BT_TLS_KEY` — certificados TLS
 - `BT_COLS` / `BT_ROWS` — tamaño del PTY (def 80x24)
 - `BT_FRAME_ANCESTORS` — CSP frame-ancestors (def `'self'`)
+- `BT_UPLOAD_ROOT` — directorio de subidas (def `/tmp/buntty-uploads`; se crea 0700 y el servidor no arranca si es un symlink o de otro usuario)
 - `BT_KALI_FRAME_ANCESTORS` — (docker-compose) origenes que pueden enmarcar kali (def: el grid en `localhost`/`127.0.0.1`/`host.docker.internal` `:3000`)
 - `SHELL` — comando a lanzar por sesion (def bash)
