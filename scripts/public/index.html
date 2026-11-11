@@ -15,17 +15,34 @@
     <span class="bar-readonly" id="readonlyBadge" hidden>READ-ONLY</span>
     <div class="bar-users" id="users"></div>
     <div class="bar-controls">
+      <button class="bar-btn" id="btnTheme" title="Theme">Theme</button>
       <button class="bar-btn" id="btnSearch" title="Ctrl+F">Search</button>
       <button class="bar-btn" id="btnControl">Control</button>
     </div>
   </div>
 
   <div id="terminal"></div>
+  <div id="mobileKeys" hidden>
+    <button data-key="Escape">Esc</button>
+    <button data-mod="ctrl" class="mod-btn">Ctrl</button>
+    <button data-mod="alt" class="mod-btn">Alt</button>
+    <button data-key="Tab">Tab</button>
+    <button data-key="ArrowUp">&uarr;</button>
+    <button data-key="ArrowDown">&darr;</button>
+    <button data-key="ArrowLeft">&larr;</button>
+    <button data-key="ArrowRight">&rarr;</button>
+    <button data-key="/">/</button>
+    <button data-key="-">-</button>
+    <button data-key="|">|</button>
+  </div>
   <div id="searchBar" hidden>
     <input id="searchInput" type="text" placeholder="Search..." spellcheck="false">
     <button id="searchPrev" title="Previous">&#9650;</button>
     <button id="searchNext" title="Next">&#9660;</button>
     <button id="searchClose">&times;</button>
+  </div>
+  <div id="themePicker" hidden>
+    <div class="theme-list" id="themeList"></div>
   </div>
 
   <div id="overlay" class="active">
@@ -42,6 +59,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-webgl@0.18.0/lib/addon-webgl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-search@0.15.0/lib/addon-search.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-image@0.8.0/lib/addon-image.min.js"></script>
   <script type="module" src="/public/js/app.js"></script>
 </body>
 </html>

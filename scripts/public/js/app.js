@@ -2,6 +2,7 @@ import { createTerminal, fitTerminal, getTerminal, getSearchAddon } from "./term
 import { connect, send } from "./connection.js";
 import { showToast, updateUI, renderUsers, showOverlay, hideOverlay } from "./ui.js";
 import { takeControl, sendInput, sendResize } from "./control.js";
+import { THEMES, getSavedTheme, saveTheme, applyTheme } from "./themes.js";
 
 let myId = null, controllerId = null, justReleased = false, isReadonly = false;
 
@@ -46,5 +47,52 @@ function initSearch() {
     controllerId === myId && (justReleased = true, showToast("Sediste el control a la IA", "error")); takeControl(myId, controllerId);
   };
   initSearch();
+  initThemePicker();
+  initMobileKeys();
   connect(() => { fitTerminal(); term.focus(); }, handleMsg, () => showOverlay("Conexion perdida.", true));
 })();
+
+function initThemePicker() {
+  const picker = document.getElementById("themePicker"), list = document.getElementById("themeList"), btn = document.getElementById("btnTheme");
+  let current = getSavedTheme();
+  function render() {
+    list.innerHTML = "";
+    for (const [id, t] of Object.entries(THEMES)) {
+      const b = document.createElement("button");
+      b.className = "theme-opt" + (id === current ? " active" : "");
+      b.innerHTML = `<span class="theme-swatch" style="background:${t.background}"></span>${t.name}`;
+      b.onclick = () => { current = id; saveTheme(id); applyTheme(getTerminal(), id); render(); };
+      list.appendChild(b);
+    }
+  }
+  render();
+  btn.onclick = () => { picker.hidden = !picker.hidden; };
+  document.addEventListener("click", (e) => { !picker.contains(e.target) && e.target !== btn && (picker.hidden = true); });
+}
+
+function initMobileKeys() {
+  const strip = document.getElementById("mobileKeys");
+  if (!("ontouchstart" in window || navigator.maxTouchPoints > 0)) return;
+  strip.hidden = false;
+  const mods = { ctrl: false, alt: false, shift: false };
+  strip.addEventListener("click", (e) => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    const mod = btn.dataset.mod;
+    if (mod) { mods[mod] = !mods[mod]; btn.classList.toggle("active", mods[mod]); return; }
+    const key = btn.dataset.key; if (!key) return;
+    let seq = "";
+    if (key === "Escape") seq = "\x1b";
+    else if (key === "Tab") seq = "\t";
+    else if (key === "ArrowUp") seq = "\x1b[A";
+    else if (key === "ArrowDown") seq = "\x1b[B";
+    else if (key === "ArrowRight") seq = "\x1b[C";
+    else if (key === "ArrowLeft") seq = "\x1b[D";
+    else if (mods.ctrl && key.length === 1) seq = String.fromCharCode(key.toUpperCase().charCodeAt(0) - 64);
+    else if (mods.alt) seq = "\x1b" + key;
+    else seq = key;
+    if (!isReadonly && controllerId === myId) sendInput(seq);
+    Object.keys(mods).forEach((m) => { mods[m] = false; });
+    strip.querySelectorAll(".mod-btn").forEach((b) => b.classList.remove("active"));
+    getTerminal().focus();
+  });
+}
