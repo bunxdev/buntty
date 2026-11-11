@@ -5,21 +5,24 @@ import { uploadPath, MAX_UPLOAD_BYTES } from "./uploads.js";
 import { mkdir, rename, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 
+const ipOf = (ws) => String(ws.data?.ip || "?").replace(/[^0-9a-fA-F.:]/g, "?");
 const MAX_SESSIONS = Number(process.env.BT_MAX_SESSIONS) || 50;
 
 export function onOpen(ws) {
   const url = new URL(ws.data?.url || "http://x"), sessionId = normalizeSessionId(url.searchParams.get("session"));
   if (!sessionId) return void ws.close(1008, "Invalid session");
+  const readonly = ws.data?.role !== "full" || url.searchParams.get("readonly") === "1";
+  // Only full-access clients may spawn a new shell; view-only clients can just watch existing ones.
+  if (!state.sessions.has(sessionId) && ws.data?.role !== "full") return void ws.close(1008, "No such session");
   if (!state.sessions.has(sessionId) && state.sessions.size >= MAX_SESSIONS) return void ws.close(1013, "Too many sessions");
   const name = sanitizeName(url.searchParams.get("name")) || `User${state.nextId}`,
-    readonly = ws.data?.role !== "full" || url.searchParams.get("readonly") === "1",
     client = addClient(ws, name, sessionId, readonly), session = createSession(sessionId, readonly ? null : client.id);
   if (session.controllerId == null && !readonly) session.controllerId = client.id;
   const clients = getClientsForSession(sessionId);
   ws.send(JSON.stringify({ type: "welcome", clientId: client.id, name, sessionId, controllerId: session.controllerId, readonly,
     clients: clients.map(c => ({ id: c.id, name: c.name, isController: c.id === session.controllerId, readonly: !!c.readonly })) }));
   session.history && ws.send(JSON.stringify({ type: "history", data: session.history }));
-  broadcastState(sessionId); console.log(`[BunTTY] ${name} connected to ${sessionId} (ID: ${client.id}${readonly ? ", readonly" : ""}, total: ${clients.length})`);
+  broadcastState(sessionId); console.log(`[BunTTY] ${name} connected to ${sessionId} (ID: ${client.id}${readonly ? ", readonly" : ""}, ip: ${ipOf(ws)}, total: ${clients.length})`);
 }
 
 export function onMessage(ws, message) {
@@ -92,5 +95,5 @@ async function handleUpload(ws, client, msg) {
   catch (err) { await unlink(tmp).catch(() => {}); throw err; }
   ws.send(JSON.stringify({ type: "upload_complete", name: safeName, path: dest, size: buf.length }));
   broadcast(client.sessionId, { type: "output", data: `\r\n\x1b[33m[BunTTY]\x1b[0m File uploaded: ${dest} (${buf.length} bytes)\r\n` });
-  console.log(`[BunTTY] ${client.name} uploaded ${safeName} (${buf.length} bytes) to ${dest}`);
+  console.log(`[BunTTY] ${client.name} uploaded ${safeName} (${buf.length} bytes) to ${dest} (ip: ${ipOf(ws)})`);
 }
