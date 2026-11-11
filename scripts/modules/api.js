@@ -31,12 +31,16 @@ export function handleDownload(sessionId) {
 }
 
 export async function handleInput(req, sessionId) {
+  // Require JSON: a cross-site <form enctype="text/plain"> can't send it without a CORS preflight.
+  if (!(req.headers.get("content-type") || "").toLowerCase().startsWith("application/json"))
+    return Response.json({ error: "Content-Type must be application/json" }, { status: 415 });
   const body = await req.json().catch(() => null);
   if (typeof body?.data !== "string" || !body.data) return Response.json({ error: "Missing data (non-empty string)" }, { status: 400 });
   const session = liveSession(sessionId);
   if (!session) return noSession();
   writeToSession(sessionId, body.data);
   recordEvent(session, "i", body.data);
+  console.log(`[BunTTY] API input to ${sessionId} (${body.data.length} bytes)`);
   return Response.json({ ok: true, sessionId });
 }
 
@@ -45,6 +49,7 @@ export function handleTakeControl(sessionId) {
   if (!session) return noSession();
   session.controllerId = 0;
   broadcastControlChanged(sessionId, 0, "AI");
+  console.log(`[BunTTY] API took control of ${sessionId}`);
   return Response.json({ ok: true, sessionId, controllerId: 0 });
 }
 
@@ -85,5 +90,6 @@ export async function handleFileDownload(sessionId, fileName) {
   const file = Bun.file(target.path);
   if (!await file.exists()) return Response.json({ error: "File not found" }, { status: 404 });
   // Bun infers Content-Type from the extension; attachment + nosniff keeps HTML/JS from rendering inline.
-  return new Response(file, { headers: { "Content-Disposition": attachment(target.name) } });
+  // Uploaded HTML/JS is attacker-controlled: sandbox it in case a browser ever renders it.
+  return new Response(file, { headers: { "Content-Disposition": attachment(target.name), "Content-Security-Policy": "sandbox; default-src 'none'" } });
 }

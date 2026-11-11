@@ -1,13 +1,19 @@
-import { state, normalizeSessionId } from "./state.js";
+import { state, normalizeSessionId, sanitizeName } from "./state.js";
+
+const MAX_SESSIONS = Number(process.env.BT_MAX_SESSIONS) || 50;
 import { createSession, recordEvent } from "./session.js";
 import { addClient, removeClient, getClientByWs, getClientsForSession, broadcast, broadcastState, broadcastControlChanged } from "./clients.js";
 import { uploadPath, MAX_UPLOAD_BYTES } from "./uploads.js";
 import { mkdir } from "node:fs/promises";
 
 export function onOpen(ws) {
-  const url = new URL(ws.data?.url || "http://x"), sessionId = normalizeSessionId(url.searchParams.get("session")),
-    name = (url.searchParams.get("name") || "").replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, 64) || `User${state.nextId}`,
-    readonly = url.searchParams.get("readonly") === "1",
+  const url = new URL(ws.data?.url || "http://x"), sessionId = normalizeSessionId(url.searchParams.get("session"));
+  if (!sessionId) return void ws.close(1008, "Invalid session");
+  // Each new session spawns a shell: cap them so a client can't exhaust the host.
+  if (!state.sessions.has(sessionId) && state.sessions.size >= MAX_SESSIONS) return void ws.close(1013, "Too many sessions");
+  const name = sanitizeName(url.searchParams.get("name")) || `User${state.nextId}`,
+    // A view-token client is read-only no matter what it asks for; readonly=1 is only an opt-in for full clients.
+    readonly = ws.data?.role !== "full" || url.searchParams.get("readonly") === "1",
     client = addClient(ws, name, sessionId, readonly), session = createSession(sessionId, readonly ? null : client.id);
   if (session.controllerId == null && !readonly) session.controllerId = client.id;
   const clients = getClientsForSession(sessionId);
@@ -36,7 +42,12 @@ export function onMessage(ws, message) {
       handOffControl(session, client.sessionId, getClientsForSession(client.sessionId).filter(c => c.id !== client.id));
     }
     if (msg.type === "upload" && session && !client.readonly && typeof msg.name === "string" && msg.name && typeof msg.data === "string") {
-      handleUpload(ws, client, msg).catch((err) => ws.send(JSON.stringify({ type: "upload_error", name: msg.name, error: err.message })));
+      handleUpload(ws, client, msg).catch((err) => {
+        // Only our own validation messages go to the client; fs errors (paths, errno) stay in the server log.
+        const known = /^(Invalid filename|File exceeds 10MB limit)$/.test(err.message);
+        if (!known) console.error(`[BunTTY] upload failed for ${client.name}: ${String(err.message).replace(/[\x00-\x1f]/g, "?")}`);
+        ws.send(JSON.stringify({ type: "upload_error", name: String(msg.name).slice(0, 200), error: known ? err.message : "Upload failed" }));
+      });
     }
   } catch { /* drop malformed messages silently */ }
 }

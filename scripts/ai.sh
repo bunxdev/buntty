@@ -1,15 +1,23 @@
 #!/bin/bash
-API="http://localhost:3000/api"
+# BUNTTY_URL / BT_TOKEN are read from the environment. JSON is built with bun (always present; jq isn't)
+# so quotes/backslashes in the input can't break the payload.
+set -euo pipefail
+API="${BUNTTY_URL:-http://localhost:3000}/api"
+AUTH=()
+[ -n "${BT_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer $BT_TOKEN")
 
-case "$1" in
-  status)       curl -s "$API/status" ;;
-  take-control) curl -s -X POST "$API/take-control" ;;
+send() {
+  /root/.bun/bin/bun -e 'console.log(JSON.stringify({data: process.argv[1]}))' "$1" \
+    | curl -s -X POST "${AUTH[@]}" "$API/input" -H "Content-Type: application/json" --data-binary @-
+}
+
+case "${1:-}" in
+  status)       curl -s "${AUTH[@]}" "$API/status" ;;
+  take-control) curl -s -X POST "${AUTH[@]}" "$API/take-control" ;;
   input)
-    [ -z "$2" ] && echo "Usage: $0 input <data>" && exit 1
-    curl -s -X POST "$API/input" -H "Content-Type: application/json" -d "{\"data\": \"$2\"}"
+    [ -z "${2:-}" ] && echo "Usage: $0 input <data>" && exit 1
+    send "$2"
     ;;
-  *)
-    [ -z "$1" ] && echo "Usage: $0 <command|status|take-control>" && exit 1
-    curl -s -X POST "$API/input" -H "Content-Type: application/json" -d "{\"data\": \"$(echo "$1" | sed 's/"/\\"/g')\n\"}"
-    ;;
+  "") echo "Usage: $0 <command|status|take-control|input <data>>"; exit 1 ;;
+  *)  send "$1"$'\n' ;;
 esac

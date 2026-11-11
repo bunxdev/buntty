@@ -4,7 +4,8 @@ services:
     container_name: dev
     hostname: dev
     ports:
-      - "3000:3000"
+      # Loopback only: the UI is a root shell. Set BT_BIND=0.0.0.0 (plus BT_TOKEN) to expose it.
+      - "${BT_BIND:-127.0.0.1}:3000:3000"
     working_dir: /scripts
     volumes:
       - ./scripts:/scripts
@@ -18,7 +19,7 @@ services:
     container_name: kali
     hostname: kali
     ports:
-      - "3001:3000"
+      - "${BT_BIND:-127.0.0.1}:3001:3000"
     working_dir: /scripts
     volumes:
       - ./scripts:/scripts
@@ -29,6 +30,7 @@ services:
     devices:
       - /dev/net/tun
     environment:
-      - BT_FRAME_ANCESTORS=*
+      # Only the grid on :3000 may frame this terminal (was "*": clickjackable from any site).
+      - BT_FRAME_ANCESTORS='self' http://localhost:3000 http://127.0.0.1:3000
     command: ["/bin/bash", "/scripts/main.sh"]
     restart: unless-stopped

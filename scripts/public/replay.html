@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BunTTY Replay</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.css" integrity="sha384-1qwUiudFMCvecF1nL2TzvD0VmUzAWvGItfIZYi+pIyfaWqHruuO4bUt9MbvGgEhM" crossorigin="anonymous">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; background: #0a0a0a; color: #e0e0e0; font-family: monospace; }
@@ -53,31 +53,7 @@
     </nav>
   </header>
   <main id="player-container"><p class="no-session" role="status">Cargando grabación...</p></main>
-  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.min.js"></script>
-  <script>
-    const params = new URLSearchParams(location.search);
-    const token = params.get("token");
-    const withToken = (url) => token ? url + (url.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(token) : url;
-    const session = params.get("session") || "/";
-    document.getElementById("sessionLabel").textContent = session;
-    const castUrl = withToken(`/api/recording?session=${encodeURIComponent(session)}`);
-    document.getElementById("downloadBtn").href = castUrl;
-    // Only allow same-origin relative paths for the back link.
-    document.getElementById("backBtn").href = withToken(session.startsWith("/") && !session.startsWith("//") ? session : "/");
-
-    const container = document.getElementById("player-container");
-    const showEmpty = () => {
-      container.innerHTML = '<div class="no-session" role="status">No hay grabación disponible para esta sesión.<br>Escribe algo en el terminal para generar una.<br><br>Uso: <code>/replay?session=/1</code></div>';
-      document.getElementById("downloadBtn").hidden = true;
-    };
-    // Fetch first: AsciinemaPlayer loads URLs asynchronously, so a 400/404 would never reach a try/catch.
-    fetch(castUrl).then((res) => res.ok ? res.text() : Promise.reject(res.status)).then((data) => {
-      if (!data.trim()) return showEmpty();
-      container.replaceChildren();
-      AsciinemaPlayer.create({ data }, container, {
-        theme: "monokai", fit: "width", autoPlay: true, speed: 1, idleTimeLimit: 3, poster: "npt:0:01",
-      });
-    }).catch(showEmpty);
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.min.js" integrity="sha384-9ZMSHaDO4EafnRU9z9ERretI8vh35LRsWsqGZSvOehk43Fv4Ny3WzzFFAiBT7n/4" crossorigin="anonymous"></script>
+  <script src="/public/js/replay.js"></script>
 </body>
 </html>
