@@ -2,7 +2,7 @@ import { serve } from "bun";
 import pug from "pug";
 import { hostname as osHostname } from "node:os";
 import { timingSafeEqual } from "node:crypto";
-import { handleStatus, handleInput, handleTakeControl, handleScreen, handleDownload, handleUploads, handleFileDownload, handleRecording, handleRecordingStatus } from "./modules/api.js";
+import { handleStatus, handleInput, handleTakeControl, handleReleaseControl, handleSessions, handleScreen, handleDownload, handleUploads, handleFileDownload, handleRecording, handleRecordingStatus } from "./modules/api.js";
 import { onOpen, onMessage, onClose } from "./modules/handlers.js";
 import { normalizeSessionId } from "./modules/state.js";
 
@@ -66,7 +66,10 @@ if (FRAME_ANCESTORS === "'none'") secHeaders["X-Frame-Options"] = "DENY";
 else if (FRAME_ANCESTORS === "'self'") secHeaders["X-Frame-Options"] = "SAMEORIGIN";
 // Route-specific headers win (e.g. /api/files sets a sandbox CSP for untrusted uploads).
 const sec = (res) => { for (const [k, v] of Object.entries(secHeaders)) res.headers.has(k) || res.headers.set(k, v); return res; };
-const deny = (msg, status) => sec(new Response(msg, { status }));
+// /api/* always answers JSON ({ error }) so API clients can parse every failure the same way.
+const deny = (msg, status, path = "") => sec(path.startsWith("/api/")
+  ? Response.json({ error: msg }, { status, headers: status === 401 ? { "WWW-Authenticate": 'Bearer realm="BunTTY"' } : {} })
+  : new Response(msg, { status }));
 const html = (body) => new Response(body, { headers: { "Content-Type": "text/html", "Cache-Control": "no-store" } });
 const json = (body, status) => Response.json(body, { status });
 
@@ -83,7 +86,8 @@ const noteAuthFail = (ip) => {
 setInterval(() => { const now = Date.now(); for (const [k, b] of authFails) if (now - b.start >= AUTH_FAIL_WINDOW) authFails.delete(k); }, 60_000).unref?.();
 
 const API = {
-  "/api/screen": { GET: (_, s) => handleScreen(s) },
+  "/api/sessions": { GET: () => handleSessions() },
+  "/api/screen": { GET: (_, s, u) => handleScreen(s, u) },
   "/api/status": { GET: (_, s) => handleStatus(s) },
   "/api/download": { GET: (_, s) => handleDownload(s) },
   "/api/uploads": { GET: (_, s) => handleUploads(s) },
@@ -92,16 +96,18 @@ const API = {
   "/api/recording/status": { GET: (_, s) => handleRecordingStatus(s) },
   "/api/input": { POST: (req, s) => handleInput(req, s), _full: true },
   "/api/take-control": { POST: (_, s) => handleTakeControl(s), _full: true },
+  "/api/release-control": { POST: (_, s) => handleReleaseControl(s), _full: true },
 };
+const allowed = (route) => { const m = Object.keys(route).filter(k => !k.startsWith("_")); return (m.includes("GET") ? [...m, "HEAD"] : m).join(", "); };
 const indexHtml = Bun.file("./public/index.html");
 
 const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequestBodySize: 1024 * 1024,
   async fetch(req, server) {
     const u = new URL(req.url), sessionId = normalizeSessionId(u.searchParams.get("session"));
     const ip = server.requestIP(req)?.address || "?";
-    if (!hostOk(req)) return secLog("forbidden_host", req, ip), deny("Forbidden host", 403);
+    if (!hostOk(req)) return secLog("forbidden_host", req, ip), deny("Forbidden host", 403, u.pathname);
     if (u.pathname.startsWith("/public/")) {
-      if (u.pathname.includes("..")) return deny("Forbidden", 403);
+      if (u.pathname.includes("..")) return deny("Forbidden", 403, u.pathname);
       const f = Bun.file(`.${u.pathname}`);
       return sec(await f.exists() ? new Response(f) : new Response("Not Found", { status: 404 }));
     }
@@ -112,15 +118,15 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
       const host = req.headers.get("host") || "localhost:3000";
       return sec(new Response(gridRender({ agents: agentsConfig.agents, cols, rows, host, token: u.searchParams.get("token") || "" }), { headers: { "Content-Type": "text/html" } }));
     }
-    if (authBlocked(ip)) return secLog("auth_rate_limited", req, ip), deny("Too Many Requests", 429);
+    if (authBlocked(ip)) return secLog("auth_rate_limited", req, ip), deny("Too Many Requests", 429, u.pathname);
     const role = getRole(req, u);
-    if (!role) return noteAuthFail(ip), secLog("auth_failed", req, ip), deny("Unauthorized", 401);
-    if (sessionId === null && (u.pathname === "/ws" || u.pathname.startsWith("/api/"))) return secLog("bad_session", req, ip), deny("Invalid session", 400);
+    if (!role) return noteAuthFail(ip), secLog("auth_failed", req, ip), deny("Unauthorized", 401, u.pathname);
+    if (sessionId === null && (u.pathname === "/ws" || u.pathname.startsWith("/api/"))) return secLog("bad_session", req, ip), deny("Invalid session", 400, u.pathname);
     if (u.pathname === "/ws") {
-      if (!originOk(req)) return secLog("forbidden_origin", req, ip), deny("Forbidden origin", 403);
-      return server.upgrade(req, { data: { url: req.url, role } }) ? undefined : deny("Upgrade failed", 400);
+      if (!originOk(req)) return secLog("forbidden_origin", req, ip), deny("Forbidden origin", 403, u.pathname);
+      return server.upgrade(req, { data: { url: req.url, role } }) ? undefined : deny("Upgrade failed", 400, u.pathname);
     }
-    if (req.method !== "GET" && !originOk(req)) return secLog("forbidden_origin", req, ip), deny("Forbidden origin", 403);
+    if (req.method !== "GET" && !originOk(req)) return secLog("forbidden_origin", req, ip), deny("Forbidden origin", 403, u.pathname);
     if (req.method === "GET" && u.searchParams.has("token") && !u.pathname.startsWith("/api/")) {
       u.searchParams.delete("token");
       const secure = tlsOpts ? "; Secure" : "";
@@ -133,8 +139,8 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
       const route = API[u.pathname.replace(/\/+$/, "")];
       const h = route?.[req.method] ?? (req.method === "HEAD" && route?.GET);
       if (!route) r = json({ error: "Not found" }, 404);
-      else if (!h) r = new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { "Content-Type": "application/json", Allow: Object.keys(route).filter(k => !k.startsWith("_")).join(", ") } });
-      else if (route._full && role !== "full") r = deny("Forbidden", 403);
+      else if (!h) r = new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { "Content-Type": "application/json", Allow: allowed(route) } });
+      else if (route._full && role !== "full") r = deny("Requires a full-access token", 403, u.pathname);
       else r = await h(req, sessionId, u);
     } else if (req.method === "GET" || req.method === "HEAD") {
       r = new Response(indexHtml, { headers: { "Content-Type": "text/html", "Cache-Control": "no-store" } });

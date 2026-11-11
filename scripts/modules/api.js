@@ -1,6 +1,7 @@
 import { state, inside } from "./state.js";
 import { writeToSession, recordEvent, recordingFull, MAX_RECORDING_EVENTS, MAX_RECORDING_BYTES } from "./session.js";
 import { getClientsForSession, broadcastControlChanged } from "./clients.js";
+import { handOffControl } from "./handlers.js";
 import { uploadDir, uploadPath } from "./uploads.js";
 import { readdir, realpath, stat } from "node:fs/promises";
 
@@ -16,10 +17,26 @@ export function handleStatus(sessionId) {
     controller: session?.controllerId ?? null });
 }
 
-export function handleScreen(sessionId) {
+// Tail of the output. ?chars=N (1..100000, default 4000) sets the size; ?strip=1 removes ANSI codes,
+// which is what scripts/LLMs reading the screen usually want.
+export function handleScreen(sessionId, u) {
   const session = state.sessions.get(sessionId);
   if (!session) return noSession();
-  return Response.json({ sessionId, screen: (session.history || "").slice(-4000) });
+  const chars = Math.max(1, Math.min(100_000, Math.trunc(Number(u?.searchParams.get("chars"))) || 4000));
+  const strip = u?.searchParams.get("strip") === "1";
+  let screen = (session.history || "").slice(-chars);
+  if (/^[\udc00-\udfff]/.test(screen)) screen = screen.slice(1); // don't start on half a surrogate pair
+  if (strip) screen = Bun.stripANSI(screen);
+  return Response.json({ sessionId, screen, stripped: strip });
+}
+
+// All live sessions, so API clients can discover ids instead of guessing them.
+export function handleSessions() {
+  const sessions = [...state.sessions.values()].map(s => ({ id: s.id, pid: s.proc?.pid ?? null,
+    active: !s.terminal.closed, controller: s.controllerId ?? null, clients: getClientsForSession(s.id).length,
+    cols: s.size?.cols ?? s.recordingHeader.width, rows: s.size?.rows ?? s.recordingHeader.height,
+    createdAt: new Date(s.createdAt).toISOString() }));
+  return Response.json({ sessions });
 }
 
 export function handleDownload(sessionId) {
@@ -41,12 +58,22 @@ export async function handleInput(req, sessionId) {
 }
 
 export function handleTakeControl(sessionId) {
-  const session = state.sessions.get(sessionId);
+  const session = liveSession(sessionId);
   if (!session) return noSession();
   session.controllerId = 0;
   broadcastControlChanged(sessionId, 0, "AI");
   console.log(`[BunTTY] API took control of ${sessionId}`);
   return Response.json({ ok: true, sessionId, controllerId: 0 });
+}
+
+// Counterpart of take-control: hand the session back to the first connected writer (or nobody).
+export function handleReleaseControl(sessionId) {
+  const session = state.sessions.get(sessionId);
+  if (!session) return noSession();
+  if (session.controllerId !== 0) return Response.json({ error: "API does not hold control", controllerId: session.controllerId ?? null }, { status: 409 });
+  handOffControl(session, sessionId, getClientsForSession(sessionId));
+  console.log(`[BunTTY] API released control of ${sessionId}`);
+  return Response.json({ ok: true, sessionId, controllerId: session.controllerId ?? null });
 }
 
 export async function handleUploads(sessionId) {
@@ -66,9 +93,18 @@ export async function handleUploads(sessionId) {
 export function handleRecording(sessionId) {
   const session = state.sessions.get(sessionId);
   if (!session) return noSession();
-  let cast = JSON.stringify(session.recordingHeader) + "\n";
-  for (const ev of session.recording) cast += JSON.stringify(ev) + "\n";
-  return new Response(cast, { headers: {
+  // Stream in chunks instead of building one string of up to MAX_RECORDING_BYTES in memory.
+  // Snapshot the length so events recorded mid-download don't make the file inconsistent.
+  const events = session.recording, total = events.length, header = JSON.stringify(session.recordingHeader) + "\n";
+  let i = 0;
+  const body = new ReadableStream({ pull(ctrl) {
+    if (i === -1) return ctrl.close();
+    let chunk = i === 0 ? header : "";
+    for (const end = Math.min(total, i + 1000); i < end; i++) chunk += JSON.stringify(events[i]) + "\n";
+    if (i >= total) i = -1;
+    ctrl.enqueue(chunk);
+  } });
+  return new Response(body, { headers: {
     "Content-Type": "application/x-asciicast", "Content-Disposition": attachment(`${fileStem(sessionId)}.cast`) } });
 }
 

@@ -62,7 +62,7 @@ export function onClose(ws) {
   console.log(`[BunTTY] ${client.name} disconnected from ${client.sessionId}. Session kept alive.`);
 }
 
-function handOffControl(session, sessionId, candidates) {
+export function handOffControl(session, sessionId, candidates) {
   const next = candidates.find(c => !c.readonly);
   next ? (session.controllerId = next.id, applySize(session, next.size), broadcastControlChanged(sessionId, next.id, next.name)) : (session.controllerId = null, broadcastState(sessionId));
 }
