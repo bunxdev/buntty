@@ -1,6 +1,8 @@
 import { state, normalizeSessionId } from "./state.js";
-import { createSession } from "./session.js";
+import { createSession, writeToSession } from "./session.js";
 import { addClient, removeClient, getClientByWs, getClientsForSession, broadcastState, broadcastControlChanged } from "./clients.js";
+import { mkdir } from "node:fs/promises";
+import { resolve } from "node:path";
 
 export function onOpen(ws) {
   const url = new URL(ws.data?.url || "http://x"), sessionId = normalizeSessionId(url.searchParams.get("session")),
@@ -24,6 +26,9 @@ export function onMessage(ws, message) {
       const others = getClientsForSession(client.sessionId).filter(c => c.id !== client.id);
       others.length > 0 ? (session.controllerId = others[0].id, broadcastControlChanged(client.sessionId, others[0].id, others[0].name)) : (session.controllerId = null, broadcastState(client.sessionId));
     }
+    if (msg.type === "upload" && session && !client.readonly && msg.name && msg.data) {
+      handleUpload(ws, client, msg).catch((err) => ws.send(JSON.stringify({ type: "upload_error", name: msg.name, error: err.message })));
+    }
   } catch { session && client.id === session.controllerId && !session.terminal.closed && session.terminal.write(String(message)); }
 }
 
@@ -34,4 +39,21 @@ export function onClose(ws) {
     remaining.length > 0 ? (session.controllerId = remaining[0].id, broadcastControlChanged(client.sessionId, remaining[0].id, remaining[0].name)) : (session.controllerId = null, broadcastState(client.sessionId));
   } else broadcastState(client.sessionId);
   console.log(`[BunTTY] ${client.name} disconnected from ${client.sessionId}. Session kept alive.`);
+}
+
+const UPLOAD_ROOT = "/tmp/buntty-uploads";
+
+async function handleUpload(ws, client, msg) {
+  const safeName = msg.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
+  const dir = resolve(UPLOAD_ROOT, client.sessionId.replace(/^\//, "") || "default");
+  await mkdir(dir, { recursive: true });
+  const dest = resolve(dir, safeName);
+  if (!dest.startsWith(dir)) throw new Error("Invalid filename");
+  const buf = Buffer.from(msg.data, "base64");
+  if (buf.length > 10 * 1024 * 1024) throw new Error("File exceeds 10MB limit");
+  await Bun.write(dest, buf);
+  ws.send(JSON.stringify({ type: "upload_complete", name: safeName, path: dest, size: buf.length }));
+  const session = state.sessions.get(client.sessionId);
+  if (session && !session.terminal.closed) session.terminal.write(`\r\n\x1b[33m[BunTTY]\x1b[0m File uploaded: ${dest} (${buf.length} bytes)\r\n`);
+  console.log(`[BunTTY] ${client.name} uploaded ${safeName} (${buf.length} bytes) to ${dest}`);
 }

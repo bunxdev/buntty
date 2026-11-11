@@ -3,6 +3,7 @@ import { connect, send } from "./connection.js";
 import { showToast, updateUI, renderUsers, showOverlay, hideOverlay } from "./ui.js";
 import { takeControl, sendInput, sendResize } from "./control.js";
 import { THEMES, getSavedTheme, saveTheme, applyTheme } from "./themes.js";
+import { initFileTransfer, handleUploadComplete } from "./file-transfer.js";
 
 let myId = null, controllerId = null, justReleased = false, isReadonly = false;
 
@@ -19,6 +20,8 @@ function handleMsg(msg, raw) {
   msg.type === "error" && showOverlay(msg.message, true);
   msg.type === "session_ended" && (showToast("Sesion terminada", "error"), showOverlay("La sesion del shell ha terminado.", true));
   msg.type === "exit" && showToast("Shell finalizado", "error");
+  msg.type === "upload_complete" && handleUploadComplete(msg);
+  msg.type === "upload_error" && showToast(`Upload failed: ${msg.error}`, "error");
 }
 
 function initSearch() {
@@ -49,6 +52,8 @@ function initSearch() {
   initSearch();
   initThemePicker();
   initMobileKeys();
+  initFileTransfer();
+  initFilesPanel();
   connect(() => { fitTerminal(); term.focus(); }, handleMsg, () => showOverlay("Conexion perdida.", true));
 })();
 
@@ -68,6 +73,25 @@ function initThemePicker() {
   render();
   btn.onclick = () => { picker.hidden = !picker.hidden; };
   document.addEventListener("click", (e) => { !picker.contains(e.target) && e.target !== btn && (picker.hidden = true); });
+}
+
+function initFilesPanel() {
+  const panel = document.getElementById("filesPanel"), list = document.getElementById("filesList"), btn = document.getElementById("btnFiles");
+  const session = encodeURIComponent(location.pathname.replace(/\/+$/, "") || "/");
+  btn.onclick = async () => {
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) {
+      list.innerHTML = "<div style='color:#888;font-size:11px;padding:6px'>Loading...</div>";
+      try {
+        const res = await fetch(`/api/uploads?session=${session}`);
+        const data = await res.json();
+        if (!data.files.length) { list.innerHTML = "<div style='color:#888;font-size:11px;padding:6px'>No files uploaded yet. Drag & drop files onto the terminal.</div>"; return; }
+        list.innerHTML = data.files.map(f => `<a class="file-item" href="${f.url}" download="${f.name}">${f.name}</a>`).join("");
+      } catch { list.innerHTML = "<div style='color:#e74c3c;font-size:11px;padding:6px'>Failed to load files</div>"; }
+    }
+  };
+  document.getElementById("filesClose").onclick = () => { panel.hidden = true; };
+  document.addEventListener("click", (e) => { !panel.contains(e.target) && e.target !== btn && (panel.hidden = true); });
 }
 
 function initMobileKeys() {

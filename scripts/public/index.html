@@ -17,6 +17,7 @@
     <div class="bar-controls">
       <button class="bar-btn" id="btnTheme" title="Theme">Theme</button>
       <button class="bar-btn" id="btnSearch" title="Ctrl+F">Search</button>
+      <button class="bar-btn" id="btnFiles" title="Uploaded files">Files</button>
       <button class="bar-btn" id="btnControl">Control</button>
     </div>
   </div>
@@ -53,6 +54,11 @@
     </div>
   </div>
 
+  <div id="dropZone" hidden>Drop file to upload</div>
+  <div id="filesPanel" hidden>
+    <div class="files-header">Uploaded Files<button id="filesClose">&times;</button></div>
+    <div class="files-list" id="filesList"></div>
+  </div>
   <div class="toast" id="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
