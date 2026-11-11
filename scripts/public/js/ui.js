@@ -42,7 +42,13 @@ export function showOverlay(msg, btn = false) {
   $("overlayMsg").textContent = msg;
   $("overlayBtn").hidden = !btn;
   $("overlay").classList.add("active");
+  setBackgroundInert(true);
   if (btn) $("overlayBtn").focus();
 }
 
-export const hideOverlay = () => $("overlay").classList.remove("active");
+export const hideOverlay = () => { $("overlay").classList.remove("active"); setBackgroundInert(false); };
+
+// aria-modal alone doesn't stop Tab from reaching the bar/terminal behind the overlay
+function setBackgroundInert(on) {
+  for (const el of document.querySelectorAll(".bar, #terminal, #mobileKeys")) el.inert = on;
+}

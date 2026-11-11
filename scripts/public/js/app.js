@@ -103,6 +103,14 @@ function initSearch() {
     if ((mods.ctrl || mods.alt) && d.length === 1) { d = keySequence(d, mods); resetMods(); }
     sendInput(d);
   });
+  // Keystrokes are dropped without control: say so instead of failing silently
+  let hintAt = 0;
+  el.addEventListener("keydown", (e) => {
+    if (controllerId === myId || ["Shift", "Control", "Alt", "Meta", "Escape"].includes(e.key) || e.ctrlKey && e.shiftKey) return;
+    if (Date.now() - hintAt < 4000) return;
+    hintAt = Date.now();
+    showToast(isReadonly ? "Modo solo lectura" : "Toma el control para escribir", "warn");
+  });
   term.onResize(({ cols, rows }) => sendResize(cols, rows));
   window.addEventListener("resize", fitTerminal); new ResizeObserver(fitTerminal).observe(el);
   $("btnControl").onclick = () => {
