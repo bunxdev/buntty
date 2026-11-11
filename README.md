@@ -138,6 +138,10 @@ que visites podria intentar hablar con `localhost:3000`. Para evitarlo:
 - Los nombres de usuario se sanean, y el frontend los muestra con `textContent`.
 - `resize` y los parametros del grid se acotan.
 - El maximo de shells simultaneos es `BT_MAX_SESSIONS`.
+- El maximo de WebSockets es `BT_MAX_CLIENTS` (total) y `BT_MAX_CLIENTS_PER_IP`.
+- Un cliente que deja de leer y acumula 16 MB sin enviar se desconecta.
+- `BT_SESSION_IDLE_MINUTES` (opcional) mata los shells sin clientes ni salida
+  durante ese tiempo. Por defecto las sesiones viven para siempre.
 - Las peticiones HTTP tienen un limite de 1 MB, y los mensajes WS de 16 MB.
 
 **Archivos subidos.** Se sirven siempre como `attachment`, con
@@ -169,6 +173,9 @@ el historial de git, asi que **hay que rotarlo**.
 - `BT_ALLOWED_HOSTS` — hostnames extra aceptados en `Host` (coma-separados)
 - `BT_ALLOWED_ORIGINS` — origenes extra aceptados para WS/POST (coma-separados)
 - `BT_MAX_SESSIONS` — maximo de sesiones/shells simultaneos (def 50)
+- `BT_MAX_CLIENTS` — maximo de WebSockets simultaneos (def 200)
+- `BT_MAX_CLIENTS_PER_IP` — maximo de WebSockets por IP (def 30)
+- `BT_SESSION_IDLE_MINUTES` — cierra shells inactivos sin clientes (def 0 = nunca)
 - `BT_BIND` — IP donde Docker publica los puertos (def `127.0.0.1`)
 - `BT_INSECURE_ANY_IP` — `1` permite IPs publicas sin token (no recomendado)
 - `LUPA_API_TOKEN` / `LUPA_URL` — credenciales de las herramientas `scripts/tools/lupa-*`

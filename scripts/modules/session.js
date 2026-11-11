@@ -32,6 +32,7 @@ export function createSession(sessionId, clientId) {
   const proc = Bun.spawn([process.env.SHELL || "bash"], { terminal: { cols, rows,
     data: (_, d) => { const output = decoder.decode(d, { stream: true }); if (!output) return;
       if (!session) return void (pendingHistory = appendHistory(pendingHistory, output));
+      session.lastActivity = Date.now();
       session.history = appendHistory(session.history, output);
       recordEvent(session, "o", output);
       broadcast(sessionId, { type: "output", data: output }); },
@@ -39,7 +40,7 @@ export function createSession(sessionId, clientId) {
       broadcast(sessionId, { type: "exit", code: c, signal: sig }); broadcast(sessionId, { type: "session_ended" }); destroySession(sessionId); },
   }, env: { ...process.env, TERM: "xterm-256color" } });
   const now = Date.now();
-  session = { id: sessionId, terminal: proc.terminal, proc, controllerId: clientId, createdAt: now, history: pendingHistory,
+  session = { id: sessionId, terminal: proc.terminal, proc, controllerId: clientId, createdAt: now, lastActivity: now, history: pendingHistory,
     recording: [], recordingBytes: 0, recordingHeader: { version: 2, width: cols, height: rows, timestamp: Math.floor(now / 1000), env: { SHELL: process.env.SHELL || "bash", TERM: "xterm-256color" } } };
   state.sessions.set(sessionId, session);
   console.log(`[BunTTY] Session ${sessionId} created (PID: ${proc.pid}, recording: on)`);

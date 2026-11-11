@@ -4,6 +4,8 @@ import { addClient, removeClient, getClientByWs, getClientsForSession, broadcast
 import { saveUpload, MAX_UPLOAD_BYTES } from "./uploads.js";
 
 const ipOf = (ws) => String(ws.data?.ip || "?").replace(/[^0-9a-fA-F.:]/g, "?");
+const MAX_CLIENTS = Number(process.env.BT_MAX_CLIENTS) || 200;
+const MAX_CLIENTS_PER_IP = Number(process.env.BT_MAX_CLIENTS_PER_IP) || 30;
 
 export function onOpen(ws) {
   const url = new URL(ws.data?.url || "http://x"), sessionId = normalizeSessionId(url.searchParams.get("session"));
@@ -12,6 +14,9 @@ export function onOpen(ws) {
   // Only full-access clients may spawn a new shell; view-only clients can just watch existing ones.
   if (!state.sessions.has(sessionId) && ws.data?.role !== "full") return void ws.close(1008, "No such session");
   if (!state.sessions.has(sessionId) && state.sessions.size >= MAX_SESSIONS) return void ws.close(1013, "Too many sessions");
+  if (state.clients.size >= MAX_CLIENTS) return void (console.warn(`[BunTTY][SEC] ${new Date().toISOString()} ws_limit total=${state.clients.size} ip=${ipOf(ws)}`), ws.close(1013, "Too many clients"));
+  let perIp = 0; for (const c of state.clients.values()) if (c.ws.data?.ip === ws.data?.ip) perIp++;
+  if (perIp >= MAX_CLIENTS_PER_IP) return void (console.warn(`[BunTTY][SEC] ${new Date().toISOString()} ws_limit_ip count=${perIp} ip=${ipOf(ws)}`), ws.close(1013, "Too many clients from this address"));
   const name = sanitizeName(url.searchParams.get("name")) || `User${state.nextId}`,
     client = addClient(ws, name, sessionId, readonly), session = createSession(sessionId, readonly ? null : client.id);
   if (session.controllerId == null && !readonly) session.controllerId = client.id;

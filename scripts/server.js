@@ -5,7 +5,9 @@ import { timingSafeEqual } from "node:crypto";
 import { handleStatus, handleInput, handleTakeControl, handleReleaseControl, handleSessions, handleCreateSession, handleDeleteSession, handleResize, handleUpload, handleScreen, handleDownload, handleUploads, handleFileDownload, handleRecording, handleRecordingStatus } from "./modules/api.js";
 import { MAX_UPLOAD_BYTES } from "./modules/uploads.js";
 import { onOpen, onMessage, onClose } from "./modules/handlers.js";
-import { normalizeSessionId, inside } from "./modules/state.js";
+import { normalizeSessionId, inside, state } from "./modules/state.js";
+import { destroySession } from "./modules/session.js";
+import { getClientsForSession } from "./modules/clients.js";
 import { realpathSync } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 
@@ -213,8 +215,19 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
   // A client that can't keep up is disconnected instead of silently dropping output (which would
   // leave its terminal garbled); on reconnect it gets a consistent copy from the history message.
   websocket: { open: onOpen, message: onMessage, close: onClose, maxPayloadLength: 16 * 1024 * 1024,
-    backpressureLimit: 8 * 1024 * 1024, closeOnBackpressureLimit: true },
+    backpressureLimit: 16 * 1024 * 1024, closeOnBackpressureLimit: true },
 });
+
+// Opt-in: kill shells with no connected client and no output for BT_SESSION_IDLE_MINUTES.
+// Off by default because API-driven agents may keep a shell without any WebSocket viewer.
+const IDLE_MS = Number(process.env.BT_SESSION_IDLE_MINUTES) * 60_000;
+if (IDLE_MS > 0) setInterval(() => {
+  const now = Date.now();
+  for (const s of [...state.sessions.values()]) if (!getClientsForSession(s.id).length && now - s.lastActivity >= IDLE_MS) {
+    console.warn(`[BunTTY][SEC] ${new Date().toISOString()} session_idle_reaped session=${logSafe(s.id)} pid=${s.proc?.pid}`);
+    destroySession(s.id);
+  }
+}, Math.min(60_000, IDLE_MS)).unref?.();
 
 const proto = tlsOpts ? "https" : "http";
 const features = [TOKEN && "auth", VIEW_TOKEN && "view-token", tlsOpts && "tls", FRAME_ANCESTORS !== "'self'" && "csp"].filter(Boolean).join(", ") || "open (host-pinned)";
