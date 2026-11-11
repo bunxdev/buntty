@@ -64,7 +64,8 @@ const CSP = [
 const secHeaders = { "Content-Security-Policy": CSP, "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
 if (FRAME_ANCESTORS === "'none'") secHeaders["X-Frame-Options"] = "DENY";
 else if (FRAME_ANCESTORS === "'self'") secHeaders["X-Frame-Options"] = "SAMEORIGIN";
-const sec = (res) => { for (const [k, v] of Object.entries(secHeaders)) res.headers.set(k, v); return res; };
+// Route-specific headers win (e.g. /api/files sets a sandbox CSP for untrusted uploads).
+const sec = (res) => { for (const [k, v] of Object.entries(secHeaders)) res.headers.has(k) || res.headers.set(k, v); return res; };
 const deny = (msg, status) => sec(new Response(msg, { status }));
 const html = (body) => new Response(body, { headers: { "Content-Type": "text/html", "Cache-Control": "no-store" } });
 const json = (body, status) => Response.json(body, { status });

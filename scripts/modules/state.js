@@ -21,7 +21,10 @@ export const inside = (dir, child) => child === dir || child.startsWith(dir + se
 
 export function uploadDir(sessionId) {
   if (typeof sessionId !== "string") throw new Error("Invalid session");
-  const dir = resolve(UPLOAD_ROOT, sessionId.replace(/^\//, "") || "default");
+  // Flat, collision-free dir per session: "/" -> "+root", "/a/b" -> "a+b". "+" never appears in a
+  // segment, so "/" can't share a dir with "/default" and "/a" can't contain the dir of "/a/b".
+  const id = sessionId.replace(/^\/+/, "");
+  const dir = resolve(UPLOAD_ROOT, id ? id.replaceAll("/", "+") : "+root");
   if (!inside(UPLOAD_ROOT, dir)) throw new Error("Invalid session");
   return dir;
 }

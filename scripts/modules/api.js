@@ -1,8 +1,8 @@
-import { state } from "./state.js";
+import { state, inside } from "./state.js";
 import { writeToSession, recordEvent, recordingFull, MAX_RECORDING_EVENTS, MAX_RECORDING_BYTES } from "./session.js";
 import { getClientsForSession, broadcastControlChanged } from "./clients.js";
 import { uploadDir, uploadPath } from "./uploads.js";
-import { readdir } from "node:fs/promises";
+import { readdir, realpath, stat } from "node:fs/promises";
 
 const noSession = () => Response.json({ error: "No active session" }, { status: 404 });
 const liveSession = (id) => { const s = state.sessions.get(id); return s && !s.terminal.closed ? s : null; };
@@ -52,7 +52,8 @@ export function handleTakeControl(sessionId) {
 export async function handleUploads(sessionId) {
   const dir = uploadDir(sessionId);
   try {
-    const entries = (await readdir(dir, { withFileTypes: true })).filter(e => e.isFile());
+    // Only list regular files whose names survive uploadPath() unchanged, so every listed url downloads.
+    const entries = (await readdir(dir, { withFileTypes: true })).filter(e => e.isFile() && uploadPath(sessionId, e.name)?.name === e.name);
     const files = await Promise.all(entries.map(async (e) => {
       const f = Bun.file(`${dir}/${e.name}`), st = await f.stat();
       return { name: e.name, size: st.size, modified: st.mtime.toISOString(), type: f.type,
@@ -83,9 +84,11 @@ export async function handleFileDownload(sessionId, fileName) {
   if (!fileName) return Response.json({ error: "Missing file parameter" }, { status: 400 });
   const target = uploadPath(sessionId, fileName);
   if (!target) return Response.json({ error: "Invalid file name" }, { status: 400 });
-  const file = Bun.file(target.path);
-  if (!await file.exists()) return Response.json({ error: "File not found" }, { status: 404 });
-  return new Response(file, { headers: {
+  // Resolve symlinks: a link created from the shell must not expose files outside the upload dir.
+  const [real, realDir] = await Promise.all([realpath(target.path), realpath(target.dir)]).catch(() => []);
+  const st = real && inside(realDir, real) ? await stat(real).catch(() => null) : null;
+  if (!st?.isFile()) return Response.json({ error: "File not found" }, { status: 404 });
+  return new Response(Bun.file(real), { headers: {
     "Content-Disposition": attachment(target.name),
     "Content-Security-Policy": "sandbox; default-src 'none'"
   } });
