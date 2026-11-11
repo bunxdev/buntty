@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BunTTY Replay</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #0a0a0a; color: #e0e0e0; font-family: monospace; }
+    .header {
+      height: 40px; background: #111122; display: flex; align-items: center;
+      padding: 0 16px; gap: 12px; border-bottom: 1px solid #2a2a3e;
+    }
+    .header .brand { color: #e74c3c; font-weight: bold; font-size: 13px; }
+    .header .sep { color: #333; }
+    .header .title { color: #888; font-size: 12px; }
+    .header .session { color: #3498db; font-size: 12px; font-weight: bold; }
+    .header .actions { margin-left: auto; display: flex; gap: 8px; }
+    .header .btn {
+      padding: 4px 12px; font-size: 11px; cursor: pointer; border-radius: 4px;
+      border: 1px solid #333; background: #1a1a2e; color: #aaa; font-family: monospace;
+      text-decoration: none; display: inline-block;
+    }
+    .header .btn:hover { background: #2a2a3e; color: #fff; border-color: #555; }
+    #player-container {
+      width: 100%; height: calc(100vh - 40px); padding: 20px;
+      display: flex; justify-content: center; align-items: center;
+    }
+    #player-container .ap-wrapper { width: 100% !important; max-width: 960px; height: 100% !important; }
+    .no-session {
+      text-align: center; color: #888; font-size: 14px;
+    }
+    .no-session code { color: #3498db; background: #1a1a2e; padding: 2px 8px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="brand">BunTTY</span>
+    <span class="sep">|</span>
+    <span class="title">Replay</span>
+    <span class="session" id="sessionLabel"></span>
+    <div class="actions">
+      <a class="btn" id="downloadBtn" title="Download .cast file">Download .cast</a>
+      <a class="btn" href="/" id="backBtn">Back to terminal</a>
+    </div>
+  </div>
+  <div id="player-container"></div>
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.min.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const session = params.get("session") || "/1";
+    document.getElementById("sessionLabel").textContent = session;
+    const castUrl = `/api/recording?session=${encodeURIComponent(session)}`;
+    document.getElementById("downloadBtn").href = castUrl;
+    document.getElementById("backBtn").href = session;
+
+    const container = document.getElementById("player-container");
+    try {
+      AsciinemaPlayer.create(castUrl, container, {
+        theme: "monokai",
+        fit: "width",
+        autoPlay: true,
+        speed: 1,
+        idleTimeLimit: 3,
+        poster: "npt:0:01",
+      });
+    } catch (e) {
+      container.innerHTML = '<div class="no-session">No recording available for this session.<br>Start typing in the terminal to generate a recording.<br><br>Usage: <code>/replay?session=/1</code></div>';
+    }
+  </script>
+</body>
+</html>

@@ -100,6 +100,9 @@ function initRecording() {
   document.getElementById("btnRec").onclick = () => {
     window.open(`/api/recording?session=${session}`, "_blank");
   };
+  document.getElementById("btnReplay").onclick = () => {
+    window.open(`/replay?session=${session}`, "_blank");
+  };
 }
 
 function initMobileKeys() {

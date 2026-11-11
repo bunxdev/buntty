@@ -32,6 +32,7 @@ const server = serve({ port: Number(process.env.PORT) || 3000, hostname: "0.0.0.
     const u = new URL(req.url), sessionId = normalizeSessionId(u.searchParams.get("session"));
     if (u.pathname === "/ws") return server.upgrade(req, { data: { url: req.url } }), new Response(null);
     if (u.pathname.startsWith("/public/")) return sec(new Response(Bun.file(`.${u.pathname}`)));
+    if (u.pathname === "/replay") return sec(new Response(Bun.file("./public/replay.html"), { headers: { "Content-Type": "text/html" } }));
     if (u.pathname === "/grid") {
       const cols = Number(u.searchParams.get("cols")) || 3, rows = Number(u.searchParams.get("rows")) || 2;
       return sec(new Response(gridRender({ agents: agentsConfig.agents, cols, rows }), { headers: { "Content-Type": "text/html" } }));
