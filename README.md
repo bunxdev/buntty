@@ -48,17 +48,27 @@ curl -X POST 'http://localhost:3000/api/take-control?session=%2F1'
 curl -X POST 'http://localhost:3000/api/input?session=%2F1' \
   -H 'Content-Type: application/json' \
   -d '{"data":"echo hola\r"}'
+curl -X POST 'http://localhost:3000/api/release-control?session=%2F1'
 ```
 
 Endpoints adicionales:
 
-- `GET /api/screen?session=` — captura de pantalla del terminal
+- `GET /api/sessions` — lista las sesiones vivas (id, pid, controlador, clientes, tamaño)
+- `GET /api/screen?session=&strip=1&chars=4000` — últimos `chars` caracteres de salida; `strip=1` quita códigos ANSI
+- `POST /api/release-control?session=` — devuelve el control al primer usuario conectado tras `take-control` (409 si la API no lo tiene)
 - `GET /api/download?session=` — descarga del log
 - `GET /api/uploads?session=` — lista archivos subidos
 - `GET /api/files?session=&file=` — descarga un archivo subido
 - `GET /api/recording?session=` — descarga `.cast` (asciinema v2)
 - `GET /api/recording/status?session=` — estado de la grabacion
 - `GET /replay?session=` — web replay player
+
+Con token: `Authorization: Bearer <BT_TOKEN>`. `BT_VIEW_TOKEN` solo permite lectura
+(`input`, `take-control`, `release-control` y `recording` devuelven 403).
+Todos los errores de `/api/*` responden JSON `{ "error": "..." }`.
+
+Los archivos subidos van a `/tmp/buntty-uploads/<sesion>/`, con `/` como `+`
+(`/1` → `1`, `/a/b` → `a+b`, la raíz → `+root`).
 
 ## Seguridad
 
