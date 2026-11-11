@@ -63,12 +63,15 @@ const FRAME_ANCESTORS = process.env.BT_FRAME_ANCESTORS || "'self'";
 // Framing a root shell from any origin is clickjacking. The README forbids `*`; warn loudly
 // if an operator set it, so the footgun isn't silent.
 if (/(^|\s)\*(\s|$)/.test(FRAME_ANCESTORS)) console.warn("[BunTTY][SEC] BT_FRAME_ANCESTORS allows '*': ANY website can frame this root shell (clickjacking). Use explicit origins.");
+// Allow only the CDN packages the pages load, not all of jsdelivr: otherwise any npm package
+// (attacker-publishable) is a valid script source and an HTML injection becomes script execution.
+const CDN = "https://cdn.jsdelivr.net/npm/@xterm/ https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/";
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'",
-  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+  `script-src 'self' ${CDN} 'wasm-unsafe-eval'`,
+  `style-src 'self' 'unsafe-inline' ${CDN}`,
   "img-src 'self' data: blob:",
-  "font-src 'self' data: https://cdn.jsdelivr.net",
+  `font-src 'self' data: ${CDN}`,
   "connect-src 'self'",
   "frame-src 'self' http: https:",
   "object-src 'none'", "base-uri 'none'", "form-action 'self'",

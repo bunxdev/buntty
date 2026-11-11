@@ -137,7 +137,8 @@ que visites podria intentar hablar con `localhost:3000`. Para evitarlo:
 
 **Headers.**
 
-- CSP completa: `script-src 'self' cdn.jsdelivr.net 'wasm-unsafe-eval'`, sin
+- CSP completa: `script-src 'self'` + solo los paquetes usados del CDN
+  (`cdn.jsdelivr.net/npm/@xterm/` y `asciinema-player@3.7.1/`) y `'wasm-unsafe-eval'`, sin
   scripts inline, con `object-src 'none'`, `base-uri 'none'` y
   `frame-ancestors`.
 - `X-Frame-Options`, `X-Content-Type-Options: nosniff` y
