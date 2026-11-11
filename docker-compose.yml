@@ -45,6 +45,6 @@ services:
       - BT_ALLOWED_HOSTS=host.docker.internal
       - BT_TOKEN=${BT_TOKEN:-}
       - BT_VIEW_TOKEN=${BT_VIEW_TOKEN:-}
-      - BT_FRAME_ANCESTORS=* http://localhost:3000 http://host.docker.internal:3000
+      - BT_FRAME_ANCESTORS=* http://localhost:3000 http://127.0.0.1:3000 http://host.docker.internal:3000
     command: ["/bin/bash", "/scripts/main.sh"]
     restart: unless-stopped
