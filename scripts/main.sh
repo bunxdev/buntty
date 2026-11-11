@@ -19,8 +19,10 @@ fi
 
 echo "  $(grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"') | $(uname -m) | $(date)"
 
+# Pinned so a restart never pulls an unreviewed Bun release (override with BUN_VERSION).
+BUN_VERSION="${BUN_VERSION:-1.4.4}"
 if [ ! -x "$BUN" ]; then
-  curl -fsSL https://bun.sh/install | bash
+  curl -fsSL --proto '=https' --tlsv1.2 https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
 fi
 
 # server.js imports pug; install it from the lockfile instead of relying on auto-install.
