@@ -54,6 +54,28 @@
   </header>
   <main id="player-container"><p class="no-session" role="status">Cargando grabación...</p></main>
   <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.min.js" integrity="sha384-9ZMSHaDO4EafnRU9z9ERretI8vh35LRsWsqGZSvOehk43Fv4Ny3WzzFFAiBT7n/4" crossorigin="anonymous"></script>
-  <script src="/public/js/replay.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+    const withToken = (url) => token ? url + (url.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(token) : url;
+    const session = params.get("session") || "/";
+    document.getElementById("sessionLabel").textContent = session;
+    const castUrl = withToken(`/api/recording?session=${encodeURIComponent(session)}`);
+    document.getElementById("downloadBtn").href = castUrl;
+    document.getElementById("backBtn").href = withToken(session.startsWith("/") && !session.startsWith("//") ? session : "/");
+
+    const container = document.getElementById("player-container");
+    const showEmpty = () => {
+      container.innerHTML = '<div class="no-session" role="status">No hay grabación disponible para esta sesión.<br>Escribe algo en el terminal para generar una.<br><br>Uso: <code>/replay?session=/1</code></div>';
+      document.getElementById("downloadBtn").hidden = true;
+    };
+    fetch(castUrl).then((res) => res.ok ? res.text() : Promise.reject(res.status)).then((data) => {
+      if (!data.trim()) return showEmpty();
+      container.replaceChildren();
+      AsciinemaPlayer.create({ data }, container, {
+        theme: "monokai", fit: "width", autoPlay: true, speed: 1, idleTimeLimit: 3, poster: "npt:0:01",
+      });
+    }).catch(showEmpty);
+  </script>
 </body>
 </html>

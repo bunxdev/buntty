@@ -7,7 +7,6 @@ import { readdir } from "node:fs/promises";
 const noSession = () => Response.json({ error: "No active session" }, { status: 404 });
 const liveSession = (id) => { const s = state.sessions.get(id); return s && !s.terminal.closed ? s : null; };
 const fileStem = (sessionId) => `buntty-${sessionId.replace(/[^a-zA-Z0-9_-]/g, "") || "root"}-${Date.now()}`;
-// RFC 6266: ASCII fallback plus UTF-8 filename* so non-ASCII names survive.
 const attachment = (name) => `attachment; filename="${name.replace(/[^\x20-\x7e]|["\\]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 
 export function handleStatus(sessionId) {
@@ -31,16 +30,13 @@ export function handleDownload(sessionId) {
 }
 
 export async function handleInput(req, sessionId) {
-  // Require JSON: a cross-site <form enctype="text/plain"> can't send it without a CORS preflight.
-  if (!(req.headers.get("content-type") || "").toLowerCase().startsWith("application/json"))
-    return Response.json({ error: "Content-Type must be application/json" }, { status: 415 });
+  if (!(req.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) return Response.json({ error: "Content-Type must be application/json" }, { status: 415 });
   const body = await req.json().catch(() => null);
   if (typeof body?.data !== "string" || !body.data) return Response.json({ error: "Missing data (non-empty string)" }, { status: 400 });
   const session = liveSession(sessionId);
   if (!session) return noSession();
   writeToSession(sessionId, body.data);
   recordEvent(session, "i", body.data);
-  console.log(`[BunTTY] API input to ${sessionId} (${body.data.length} bytes)`);
   return Response.json({ ok: true, sessionId });
 }
 
@@ -89,7 +85,8 @@ export async function handleFileDownload(sessionId, fileName) {
   if (!target) return Response.json({ error: "Invalid file name" }, { status: 400 });
   const file = Bun.file(target.path);
   if (!await file.exists()) return Response.json({ error: "File not found" }, { status: 404 });
-  // Bun infers Content-Type from the extension; attachment + nosniff keeps HTML/JS from rendering inline.
-  // Uploaded HTML/JS is attacker-controlled: sandbox it in case a browser ever renders it.
-  return new Response(file, { headers: { "Content-Disposition": attachment(target.name), "Content-Security-Policy": "sandbox; default-src 'none'" } });
+  return new Response(file, { headers: {
+    "Content-Disposition": attachment(target.name),
+    "Content-Security-Policy": "sandbox; default-src 'none'"
+  } });
 }

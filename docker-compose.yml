@@ -10,7 +10,6 @@ services:
     volumes:
       - ./scripts:/scripts
       - /var/run/docker.sock:/var/run/docker.sock
-      - ~/.claude:/root/.claude
     command: ["/bin/bash", "/scripts/main.sh"]
     restart: unless-stopped
 
@@ -24,7 +23,6 @@ services:
     volumes:
       - ./scripts:/scripts
       - /var/run/docker.sock:/var/run/docker.sock
-      - ~/.claude:/root/.claude
     cap_add:
       - NET_ADMIN
     devices:

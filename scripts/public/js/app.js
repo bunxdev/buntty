@@ -39,8 +39,6 @@ function handleMsg(msg, raw) {
   if (msg.type === "upload_error") showToast(`Error al subir: ${msg.error}`, "error");
 }
 
-/* ---------- Popups (theme picker, files panel): one open at a time ---------- */
-
 const popups = [];
 
 function registerPopup(panel, btn, onOpen) {
@@ -52,7 +50,6 @@ function registerPopup(panel, btn, onOpen) {
     if (!opening) return;
     panel.hidden = false;
     btn.setAttribute("aria-expanded", "true");
-    // Anchor under the button, kept inside the viewport.
     const r = btn.getBoundingClientRect(), w = panel.offsetWidth;
     panel.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + "px";
     onOpen?.();
@@ -65,8 +62,6 @@ function closePopups() { popups.forEach((p) => p.close()); }
 document.addEventListener("click", (e) => {
   for (const p of popups) if (!p.panel.hidden && !p.panel.contains(e.target) && !p.btn.contains(e.target)) p.close();
 });
-
-/* ---------- Search ---------- */
 
 function initSearch() {
   const bar = $("searchBar"), input = $("searchInput"), btn = $("btnSearch"), sa = getSearchAddon();
@@ -87,8 +82,6 @@ function initSearch() {
     if (e.key === "Enter") { e.preventDefault(); run(e.shiftKey); }
     if (e.key === "Escape") { e.preventDefault(); close(); }
   });
-  // Ctrl+Shift+F: plain Ctrl+F belongs to the shell (readline forward-char).
-  // Capture phase so xterm never receives the keystroke.
   window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === "KeyF") {
       e.preventDefault(); e.stopPropagation(); bar.hidden ? open() : close();
@@ -96,8 +89,6 @@ function initSearch() {
   }, true);
   return close;
 }
-
-/* ---------- Init ---------- */
 
 (function init() {
   const el = $("terminal"), term = createTerminal(el);
@@ -125,7 +116,6 @@ function initSearch() {
     else if (!$("searchBar").hidden && document.activeElement !== $("searchInput")) closeSearch();
   });
   connect(() => { fitTerminal(); term.focus(); }, handleMsg, () => {
-    // Keep the "session ended" message if that's why the socket closed.
     if (!sessionOver) showOverlay("Se perdió la conexión con el servidor.", true);
     $("status").textContent = "Desconectado"; $("status").className = "bar-status off";
   });
@@ -172,15 +162,12 @@ function initFilesPanel() {
 function initRecording() {
   const session = encodeURIComponent(sessionId());
   $("btnRec").onclick = () => {
-    // Attachment download: a temporary link avoids leaving an empty tab open.
     const a = document.createElement("a");
     a.href = withToken(`/api/recording?session=${session}`); a.download = "";
     document.body.appendChild(a); a.click(); a.remove();
   };
   $("btnReplay").onclick = () => window.open(withToken(`/replay?session=${session}`), "_blank", "noopener");
 }
-
-/* ---------- Touch key strip ---------- */
 
 const ARROWS = { ArrowUp: "A", ArrowDown: "B", ArrowRight: "C", ArrowLeft: "D" };
 const CTRL_PUNCT = { "@": 0, " ": 0, "[": 27, "\\": 28, "]": 29, "^": 30, "_": 31, "-": 31, "/": 31, "?": 127 };
@@ -210,7 +197,6 @@ function initMobileKeys() {
     mods.ctrl = mods.alt = false;
     strip.querySelectorAll(".mod-btn").forEach((b) => b.setAttribute("aria-pressed", "false"));
   };
-  // Keep focus (and the on-screen keyboard) on the terminal while tapping keys.
   strip.addEventListener("mousedown", (e) => e.preventDefault());
   strip.addEventListener("click", (e) => {
     const btn = e.target.closest("button"); if (!btn) return;

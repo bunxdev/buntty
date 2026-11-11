@@ -7,7 +7,6 @@ export function showToast(text, type = "info", dur = 3000) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), dur);
 }
 
-/** Status label: who is typing right now, from this client's point of view. */
 export function updateUI(myId, cid, readonly = false, clients = []) {
   const isMe = cid === myId, isAI = cid === 0, t = getTerminal(), s = $("status"), btn = $("btnControl");
   const p = new URLSearchParams(location.search), agentName = p.get("agent"), agentRole = p.get("role");
@@ -33,7 +32,6 @@ export function renderUsers(list, myId, released = false) {
     const isAI = u.id === 0, isSelf = u.id === myId;
     el.className = "user-badge" + (isAI ? " ai" : isSelf ? " self" : "")
       + (u.isController ? " controller" : "") + (u.isController && released ? " released" : "");
-    // Names come from other clients' URLs: always textContent, never innerHTML.
     el.textContent = isAI ? "IA" : isSelf ? `${u.name} (tú)` : u.name;
     el.title = (isAI ? "IA" : u.name) + (u.isController ? " — tiene el control" : "");
     return el;
