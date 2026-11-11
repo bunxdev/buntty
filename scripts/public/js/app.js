@@ -16,7 +16,7 @@ function handleMsg(msg, raw) {
     if (isReadonly) document.getElementById("readonlyBadge").hidden = false;
   }
   msg.type === "state" && (controllerId = msg.controllerId, renderUsers(msg.clients, myId, justReleased), justReleased = false, updateUI(myId, controllerId, isReadonly));
-  msg.type === "control_changed" && (controllerId = msg.controllerId, msg.controllerId === 0 ? showToast("Sediste el control a la IA", "error") : null);
+  msg.type === "control_changed" && (controllerId = msg.controllerId, msg.controllerId === 0 ? showToast("Cediste el control a la IA", "error") : null);
   msg.type === "error" && showOverlay(msg.message, true);
   msg.type === "session_ended" && (showToast("Sesion terminada", "error"), showOverlay("La sesion del shell ha terminado.", true));
   msg.type === "exit" && showToast("Shell finalizado", "error");
@@ -50,7 +50,8 @@ function initSearch() {
   window.addEventListener("resize", fitTerminal); new ResizeObserver(fitTerminal).observe(el);
   document.getElementById("btnControl").onclick = () => {
     if (isReadonly) return showToast("Read-only mode", "warn");
-    controllerId === myId && (justReleased = true, showToast("Sediste el control a la IA", "error")); takeControl(myId, controllerId);
+    if (controllerId === myId) { justReleased = true; showToast("Cediste el control a la IA", "error"); }
+    takeControl(myId, controllerId);
   };
   initSearch();
   initThemePicker();
@@ -90,7 +91,15 @@ function initFilesPanel() {
         const res = await fetch(`/api/uploads?session=${session}`);
         const data = await res.json();
         if (!data.files.length) { list.innerHTML = "<div style='color:#888;font-size:11px;padding:6px'>No files uploaded yet. Drag & drop files onto the terminal.</div>"; return; }
-        list.innerHTML = data.files.map(f => `<a class="file-item" href="${f.url}" download="${f.name}">${f.name}</a>`).join("");
+        list.innerHTML = "";
+        data.files.forEach(f => {
+          const a = document.createElement("a");
+          a.className = "file-item";
+          a.href = f.url;
+          a.download = f.name;
+          a.textContent = f.name;
+          list.appendChild(a);
+        });
       } catch { list.innerHTML = "<div style='color:#e74c3c;font-size:11px;padding:6px'>Failed to load files</div>"; }
     }
   };

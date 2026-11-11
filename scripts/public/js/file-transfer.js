@@ -19,7 +19,12 @@ export function initFileTransfer() {
       if (f.size > MAX_SIZE) return showToast(`${f.name}: exceeds 10MB limit`, "error");
       const reader = new FileReader();
       reader.onload = () => {
-        const b64 = btoa(new Uint8Array(reader.result).reduce((s, b) => s + String.fromCharCode(b), ""));
+        const bytes = new Uint8Array(reader.result);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += 8192) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+        }
+        const b64 = btoa(binary);
         send({ type: "upload", name: f.name, data: b64, size: f.size });
         showToast(`Uploading ${f.name}...`, "info");
       };

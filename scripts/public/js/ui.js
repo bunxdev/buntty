@@ -20,7 +20,7 @@ export function updateUI(myId, cid, readonly = false) {
 
 export function renderUsers(list, myId, released = false) {
   $("users").innerHTML = list.map(u =>
-    `<span class="user-badge${u.id === 0 ? " ai" : u.id === myId ? " self" : ""}${u.isController ? " controller" : ""}${u.isController && released ? " released" : ""}">${u.id === 0 ? "AI" : u.isController ? "user" : u.id === myId ? "ia" : u.name}</span>`
+    `<span class="user-badge${u.id === 0 ? " ai" : u.id === myId ? " self" : ""}${u.isController ? " controller" : ""}${u.isController && released ? " released" : ""}">${u.id === 0 ? "AI" : u.id === myId ? "user" : u.name}</span>`
   ).join("");
 }
 
