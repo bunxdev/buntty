@@ -1,7 +1,7 @@
 import { serve } from "bun";
 import pug from "pug";
 import { hostname as osHostname } from "node:os";
-import { timingSafeEqual } from "node:crypto";
+import { timingSafeEqual, createHash } from "node:crypto";
 import { handleStatus, handleInput, handleTakeControl, handleReleaseControl, handleSessions, handleCreateSession, handleDeleteSession, handleResize, handleUpload, handleScreen, handleDownload, handleUploads, handleFileDownload, handleRecording, handleRecordingStatus } from "./modules/api.js";
 import { MAX_UPLOAD_BYTES } from "./modules/uploads.js";
 import { onOpen, onMessage, onClose } from "./modules/handlers.js";
@@ -26,10 +26,11 @@ if (TOKEN && VIEW_TOKEN && TOKEN === VIEW_TOKEN) {
 for (const [name, t] of [["BT_TOKEN", TOKEN], ["BT_VIEW_TOKEN", VIEW_TOKEN]])
   if (t && t.length < 16) console.warn(`[BunTTY][SEC] ${name} is only ${t.length} chars; use 32+ random chars (e.g. openssl rand -hex 32).`);
 if (VIEW_TOKEN && !TOKEN) console.warn("[BunTTY][SEC] BT_VIEW_TOKEN without BT_TOKEN: nobody can open a new shell (only full tokens may).");
-const safeEq = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
+const digest = (v) => createHash("sha256").update(String(v)).digest();
+const safeEq = (a, b) => timingSafeEqual(digest(a), digest(b));
 const cookieToken = (req) => {
   const m = (req.headers.get("cookie") || "").match(new RegExp(`(?:^|;\\s*)${COOKIE}=([^;]+)`));
-  return m ? decodeURIComponent(m[1]) : "";
+  try { return m ? decodeURIComponent(m[1]) : ""; } catch { return m[1]; }
 };
 const presentedToken = (req, u) => {
   const h = req.headers.get("authorization") || "";
