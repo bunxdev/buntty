@@ -4,6 +4,7 @@ import { handleStatus, handleInput, handleTakeControl } from "./modules/api.js";
 import { onOpen, onMessage, onClose } from "./modules/handlers.js";
 import { normalizeSessionId } from "./modules/state.js";
 
+const agentsConfig = JSON.parse(require("fs").readFileSync("./agents/agents.json", "utf8"));
 const gridRender = pug.compileFile("./views/grid.pug");
 
 const server = serve({ port: Number(process.env.PORT) || 3000, hostname: "0.0.0.0",
@@ -11,7 +12,7 @@ const server = serve({ port: Number(process.env.PORT) || 3000, hostname: "0.0.0.
     const u = new URL(req.url), sessionId = normalizeSessionId(u.searchParams.get("session"));
     return u.pathname === "/ws" ? (server.upgrade(req, { data: { url: req.url } }), new Response(null))
       : u.pathname.startsWith("/public/") ? new Response(Bun.file(`.${u.pathname}`))
-      : u.pathname === "/grid" ? new Response(gridRender(), { headers: { "Content-Type": "text/html" } })
+      : u.pathname === "/grid" ? new Response(gridRender({ agents: agentsConfig.agents }), { headers: { "Content-Type": "text/html" } })
       : u.pathname === "/api/status" ? handleStatus(sessionId)
       : u.pathname === "/api/input" && req.method === "POST" ? handleInput(req, sessionId)
       : u.pathname === "/api/take-control" && req.method === "POST" ? handleTakeControl(sessionId)

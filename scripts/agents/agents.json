@@ -1,0 +1,53 @@
+{
+  "grid": "3x2",
+  "agents": [
+    {
+      "session": 1,
+      "name": "Designer",
+      "dir": "designer",
+      "role": "UI/UX Designer",
+      "color": "#e74c3c",
+      "description": "Diseño de interfaces, componentes y experiencia de usuario"
+    },
+    {
+      "session": 2,
+      "name": "Backend",
+      "dir": "backend",
+      "role": "Backend Developer",
+      "color": "#3498db",
+      "description": "Lógica del servidor, base de datos y arquitectura"
+    },
+    {
+      "session": 3,
+      "name": "API",
+      "dir": "api",
+      "role": "Bun API Expert",
+      "color": "#2ecc71",
+      "description": "Diseño y construcción de APIs con Bun"
+    },
+    {
+      "session": 4,
+      "name": "Red Team",
+      "dir": "red-team",
+      "role": "Offensive Security",
+      "color": "#ff4444",
+      "description": "Pruebas de penetración y búsqueda de vulnerabilidades"
+    },
+    {
+      "session": 5,
+      "name": "Blue Team",
+      "dir": "blue-team",
+      "role": "Defensive Security",
+      "color": "#4488ff",
+      "description": "Defensa, monitoreo y hardening del sistema"
+    },
+    {
+      "session": 6,
+      "name": "Purple Team",
+      "dir": "purple-team",
+      "role": "Security Analysis",
+      "color": "#9b59b6",
+      "description": "Análisis cruzado entre Red y Blue, validación de controles"
+    }
+  ]
+}

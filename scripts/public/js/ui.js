@@ -9,7 +9,8 @@ export function showToast(text, type = "info", dur = 3000) {
 
 export function updateUI(myId, cid) {
   const isMe = cid === myId, isAI = cid === 0, t = getTerminal(), s = $("status");
-  s.textContent = isAI ? "AI" : isMe ? "Humano" : "IA";
+  const p = new URLSearchParams(location.search), agentName = p.get("agent"), agentRole = p.get("role");
+  s.textContent = isAI ? "AI" : isMe ? (agentName && agentRole ? `${agentName} — ${agentRole}` : agentName || "Humano") : "IA";
   s.className = "bar-status " + (isMe || isAI ? "on" : "off");
   t.readOnly = !isMe && !isAI; t.element.style.opacity = (isMe || isAI) ? "1" : "0.85";
   $("btnControl").textContent = isMe ? "Soltar" : "Control";

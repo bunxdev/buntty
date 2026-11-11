@@ -2,7 +2,8 @@ let ws = null, cb = null;
 
 export function connect(onOpen, onMessage, onClose) {
   const p = location.protocol === "https:" ? "wss:" : "ws:",
-    n = localStorage.getItem("buntty_name") || "User" + Math.floor(Math.random() * 9000 + 1000),
+    params = new URLSearchParams(location.search),
+    n = params.get("agent") || localStorage.getItem("buntty_name") || "User" + Math.floor(Math.random() * 9000 + 1000),
     session = location.pathname.replace(/\/+$/, "") || "/";
   localStorage.setItem("buntty_name", n); cb = onMessage;
   ws = new WebSocket(`${p}//${location.host}/ws?name=${encodeURIComponent(n)}&session=${encodeURIComponent(session)}`);
