@@ -25,7 +25,8 @@ export function onMessage(ws, message) {
     }
     if (msg.type === "resize" && session && !session.terminal.closed) {
       session.terminal.resize(Math.max(1, Math.min(500, msg.cols || 80)), Math.max(1, Math.min(200, msg.rows || 24)));
-      if (session.recording.length < 50000) session.recording.push([(Date.now() - session.createdAt) / 1000, "r", `${msg.cols}x${msg.rows}`]);
+      const clampedCols = Math.max(1, Math.min(500, msg.cols || 80)), clampedRows = Math.max(1, Math.min(200, msg.rows || 24));
+      if (session.recording.length < 50000) session.recording.push([(Date.now() - session.createdAt) / 1000, "r", `${clampedCols}x${clampedRows}`]);
     }
     if (msg.type === "take_control" && session && !client.readonly) { session.controllerId = client.id; broadcastControlChanged(client.sessionId, client.id, client.name); console.log(`[BunTTY] ${client.name} took control of ${client.sessionId}`); }
     if (msg.type === "release_control" && session && session.controllerId === client.id) {
@@ -35,7 +36,7 @@ export function onMessage(ws, message) {
     if (msg.type === "upload" && session && !client.readonly && msg.name && msg.data) {
       handleUpload(ws, client, msg).catch((err) => ws.send(JSON.stringify({ type: "upload_error", name: msg.name, error: err.message })));
     }
-  } catch { session && client.id === session.controllerId && !session.terminal.closed && session.terminal.write(String(message)); }
+  } catch { /* drop malformed messages silently */ }
 }
 
 export function onClose(ws) {

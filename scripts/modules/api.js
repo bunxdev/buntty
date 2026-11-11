@@ -27,7 +27,7 @@ export function handleDownload(sessionId) {
   const clean = (session.history || "").replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
   return new Response(clean, { headers: {
     "Content-Type": "text/plain; charset=utf-8",
-    "Content-Disposition": `attachment; filename="buntty-${sessionId.replace(/\//g, "")}-${Date.now()}.log"` } });
+    "Content-Disposition": `attachment; filename="buntty-${sessionId.replace(/[^a-zA-Z0-9_-]/g, "")}-${Date.now()}.log"` } });
 }
 
 export async function handleInput(req, sessionId) {
@@ -47,7 +47,7 @@ export async function handleUploads(sessionId) {
   const dir = resolve(UPLOAD_ROOT, sessionId.replace(/^\//, "") || "default");
   try {
     const files = await readdir(dir);
-    return Response.json({ sessionId, files: files.map(f => ({ name: f, path: resolve(dir, f), url: `/api/files?session=${encodeURIComponent(sessionId)}&file=${encodeURIComponent(f)}` })) });
+    return Response.json({ sessionId, files: files.map(f => ({ name: f, url: `/api/files?session=${encodeURIComponent(sessionId)}&file=${encodeURIComponent(f)}` })) });
   } catch { return Response.json({ sessionId, files: [] }); }
 }
 
@@ -59,7 +59,7 @@ export function handleRecording(sessionId) {
   const cast = lines.join("\n") + "\n";
   return new Response(cast, { headers: {
     "Content-Type": "application/x-asciicast",
-    "Content-Disposition": `attachment; filename="buntty-${sessionId.replace(/\//g, "")}-${Date.now()}.cast"` } });
+    "Content-Disposition": `attachment; filename="buntty-${sessionId.replace(/[^a-zA-Z0-9_-]/g, "")}-${Date.now()}.cast"` } });
 }
 
 export function handleRecordingStatus(sessionId) {
@@ -79,5 +79,6 @@ export async function handleFileDownload(sessionId, fileName) {
   if (!await file.exists()) return Response.json({ error: "File not found" }, { status: 404 });
   const ext = extname(safeName).toLowerCase();
   const types = { ".txt": "text/plain", ".json": "application/json", ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".gif": "image/gif", ".pdf": "application/pdf" };
-  return new Response(file, { headers: { "Content-Type": types[ext] || "application/octet-stream", "Content-Disposition": `attachment; filename="${safeName}"` } });
+  const cleanName = safeName.replace(/"/g, "");
+  return new Response(file, { headers: { "Content-Type": types[ext] || "application/octet-stream", "Content-Disposition": `attachment; filename="${cleanName}"` } });
 }

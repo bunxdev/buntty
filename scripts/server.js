@@ -30,8 +30,14 @@ const sec = (res) => { for (const [k, v] of Object.entries(secHeaders)) res.head
 const server = serve({ port: Number(process.env.PORT) || 3000, hostname: "0.0.0.0", tls: tlsOpts,
   async fetch(req, server) {
     const u = new URL(req.url), sessionId = normalizeSessionId(u.searchParams.get("session"));
-    if (u.pathname === "/ws") return server.upgrade(req, { data: { url: req.url } }), new Response(null);
-    if (u.pathname.startsWith("/public/")) return sec(new Response(Bun.file(`.${u.pathname}`)));
+    if (u.pathname === "/ws") {
+      if (!checkAuth(req)) return sec(new Response("Unauthorized", { status: 401 }));
+      return server.upgrade(req, { data: { url: req.url } }), new Response(null);
+    }
+    if (u.pathname.startsWith("/public/")) {
+      if (u.pathname.includes("..")) return sec(new Response("Forbidden", { status: 403 }));
+      return sec(new Response(Bun.file(`.${u.pathname}`)));
+    }
     if (u.pathname === "/replay") return sec(new Response(Bun.file("./public/replay.html"), { headers: { "Content-Type": "text/html" } }));
     if (u.pathname === "/grid") {
       const cols = Number(u.searchParams.get("cols")) || 3, rows = Number(u.searchParams.get("rows")) || 2;
