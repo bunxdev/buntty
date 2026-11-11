@@ -1,0 +1,7 @@
+#!/bin/bash
+T="${LUPA_API_TOKEN:-e6c1c2d2e9bc9ef3d898ffff4554f521d51538028fc912da90b28aba3cfc49fe}"
+L="${LUPA_URL:-http://127.0.0.1:3036}"
+O="${2:-shot-$(date +%s).png}"
+[ -z "$1" ] && curl -s -X POST -H "Authorization: Bearer $T" "$L/live/screenshot" -o "$O" || \
+curl -s -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" "$L/screenshot" -d "{\"url\":\"$1\",\"format\":\"png\"}" -o "$O"
+echo "$O ($(du -h "$O"|cut -f1))"

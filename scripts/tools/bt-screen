@@ -1,0 +1,4 @@
+#!/bin/bash
+B="${BUNTTY_URL:-http://localhost:3000}"
+S="${1:-1}"
+[ "$2" = "--raw" ] && curl -s "$B/api/screen?session=%2F$S" | python3 -c "import sys,json;print(json.load(sys.stdin).get('screen',''))" || curl -s "$B/api/screen?session=%2F$S"

@@ -1,0 +1,4 @@
+#!/bin/bash
+B="${BUNTTY_URL:-http://localhost:3000}"
+[ -z "$2" ] && echo "uso: bt-send <1-6> <comando>" && exit 1
+curl -s -X POST -H "Content-Type: application/json" "$B/api/input?session=%2F$1" -d "{\"data\":\"$2\\n\"}"

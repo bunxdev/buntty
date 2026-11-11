@@ -1,0 +1,34 @@
+#!/bin/bash
+T="${LUPA_API_TOKEN:-e6c1c2d2e9bc9ef3d898ffff4554f521d51538028fc912da90b28aba3cfc49fe}"
+L="${LUPA_URL:-http://127.0.0.1:3036}"
+H=(-H "Authorization: Bearer $T" -H "Content-Type: application/json")
+post(){ curl -s -X POST "${H[@]}" "$L/$1" -d "$2"; }
+ev(){ post "live/eval" "{\"script\":\"$1\"}"; }
+
+echo "[1] gh auth login..."
+OUT=$(mktemp)
+echo "y" | gh auth login --hostname github.com --git-protocol https --web 2>&1 > "$OUT" &
+PID=$!; sleep 3
+
+CODE=$(grep -oP '\(\K[A-Z0-9-]+(?=\))' "$OUT"); rm -f "$OUT"
+[ -z "$CODE" ] && echo "error: no code" && kill $PID 2>/dev/null && exit 1
+CC=$(echo "$CODE" | tr -d '-')
+echo "   code: $CODE"
+
+echo "[2] abriendo device page..."
+post "live" '{"url":"https://github.com/login/device"}' >/dev/null; sleep 2
+
+echo "[3] seleccionar cuenta..."
+ev 'const b=document.querySelector("input[type=submit]");b&&b.click()' >/dev/null; sleep 2
+
+echo "[4] llenando $CODE..."
+ev "const c='$CC',ii=document.querySelectorAll('input[id^=user-code]');let j=0;for(let i=0;i<ii.length;i++){if(ii[i].name==='user-code-4')continue;if(j<c.length){Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(ii[i],c[j]);ii[i].dispatchEvent(new Event('input',{bubbles:true}));j++}}" >/dev/null
+
+echo "[5] submit + authorize..."
+ev 'const b=document.querySelector("input[name=commit]");b&&b.click()' >/dev/null; sleep 3
+ev "const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Authorize'));b&&b.click()" >/dev/null; sleep 2
+
+echo "[6] setup git..."
+wait $PID 2>/dev/null
+gh auth setup-git
+gh auth status
