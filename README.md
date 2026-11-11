@@ -100,7 +100,8 @@ Si Lupa u otro contenedor necesita entrar por `host.docker.internal`, usa
 `BT_BIND=0.0.0.0` **con** `BT_TOKEN` en `.env`; el grid pasa el token a los
 iframes. Kali solo se deja enmarcar por el grid de `:3000` (`BT_FRAME_ANCESTORS`
 en `docker-compose.yml`); nunca uses `*`, porque cualquier web podria
-enmarcar un shell root (clickjacking).
+enmarcar un shell root (clickjacking). Si abres el grid por IP o nombre de la
+LAN, añade ese origen con `BT_KALI_FRAME_ANCESTORS="http://<host>:3000 ..."`.
 
 **Autenticacion.**
 
@@ -165,4 +166,5 @@ el historial de git, asi que **hay que rotarlo**.
 - `BT_TLS_CERT` / `BT_TLS_KEY` — certificados TLS
 - `BT_COLS` / `BT_ROWS` — tamaño del PTY (def 80x24)
 - `BT_FRAME_ANCESTORS` — CSP frame-ancestors (def `'self'`)
+- `BT_KALI_FRAME_ANCESTORS` — (docker-compose) origenes que pueden enmarcar kali (def: el grid en `localhost`/`127.0.0.1`/`host.docker.internal` `:3000`)
 - `SHELL` — comando a lanzar por sesion (def bash)
