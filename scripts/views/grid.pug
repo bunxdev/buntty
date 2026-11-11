@@ -17,4 +17,4 @@ html(lang="es")
   body
     .grid
       each agent in agents
-        iframe(src=`/${agent.session}?agent=${encodeURIComponent(agent.name)}&role=${encodeURIComponent(agent.role)}`)
+        iframe(src=`/${agent.session}?agent=${encodeURIComponent(agent.name)}&role=${encodeURIComponent(agent.role)}&minimal=1`)

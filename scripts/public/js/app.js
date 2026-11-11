@@ -42,6 +42,9 @@ function initSearch() {
   const el = document.getElementById("terminal"), term = createTerminal(el);
   const params = new URLSearchParams(location.search);
   isReadonly = params.get("readonly") === "1";
+  if (params.get("minimal") === "1") {
+    document.querySelectorAll("#recIndicator, #btnRec, #btnReplay, #btnTheme, #btnSearch, #btnFiles, #filesPanel, #dropZone").forEach(el => el.hidden = true);
+  }
   term.onData((d) => { !isReadonly && controllerId === myId && sendInput(d); });
   term.onResize(({ cols, rows }) => sendResize(cols, rows));
   window.addEventListener("resize", fitTerminal); new ResizeObserver(fitTerminal).observe(el);
