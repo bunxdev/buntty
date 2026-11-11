@@ -8,7 +8,10 @@ export const MAX_RECORDING_EVENTS = 50_000;
 export const MAX_RECORDING_BYTES = 50 * 1024 * 1024;
 const appendHistory = (history, output) => {
   const h = history + output;
-  return h.length > MAX_HISTORY_LENGTH + HISTORY_SLACK ? h.slice(-MAX_HISTORY_LENGTH) : h;
+  if (h.length <= MAX_HISTORY_LENGTH + HISTORY_SLACK) return h;
+  // Start the kept tail at a line boundary so replay doesn't begin mid escape sequence or surrogate pair.
+  const start = h.length - MAX_HISTORY_LENGTH, nl = h.indexOf("\n", start);
+  return h.slice(nl !== -1 && nl - start < 4096 ? nl + 1 : start);
 };
 
 // Append an asciicast v2 event; stops silently once the event or byte cap is hit (see recordingFull).
