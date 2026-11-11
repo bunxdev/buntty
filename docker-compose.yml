@@ -12,6 +12,9 @@ services:
       - ~/.claude:/root/.claude
     environment:
       - BT_ALLOWED_HOSTS=host.docker.internal
+      # Root shell on 0.0.0.0: set BT_TOKEN in the host env (same value for both, the grid forwards it).
+      - BT_TOKEN=${BT_TOKEN:-}
+      - BT_VIEW_TOKEN=${BT_VIEW_TOKEN:-}
     command: ["/bin/bash", "/scripts/main.sh"]
     restart: unless-stopped
 
@@ -32,6 +35,9 @@ services:
       - /dev/net/tun
     environment:
       - BT_ALLOWED_HOSTS=host.docker.internal
+      # Root shell on 0.0.0.0: set BT_TOKEN in the host env (same value for both, the grid forwards it).
+      - BT_TOKEN=${BT_TOKEN:-}
+      - BT_VIEW_TOKEN=${BT_VIEW_TOKEN:-}
       - BT_FRAME_ANCESTORS=* http://localhost:3000 http://host.docker.internal:3000
     command: ["/bin/bash", "/scripts/main.sh"]
     restart: unless-stopped
