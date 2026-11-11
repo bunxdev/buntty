@@ -11,6 +11,10 @@
   --blue: #3498db;
   --green: #2ecc71;
   --amber: #f39c12;
+  --text-dim: #aaa;
+  --border: #333;
+  --border-hover: #555;
+  color-scheme: dark;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,7 +46,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   color: var(--accent); font-weight: bold; font-size: 13px; flex-shrink: 0;
   max-width: 18ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.bar-sep { color: #333; }
+.bar-sep { color: var(--border); }
 .bar-status { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .bar-status.on { color: var(--green); }
 .bar-status.off { color: var(--accent); }
@@ -63,10 +67,10 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .bar-controls { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
 .bar-btn {
   padding: 3px 10px; font-size: 11px; cursor: pointer; border-radius: 4px;
-  border: 1px solid #333; background: var(--raised); color: #aaa;
+  border: 1px solid var(--border); background: var(--raised); color: var(--text-dim);
   transition: background 0.15s, color 0.15s, border-color 0.15s; white-space: nowrap;
 }
-.bar-btn:hover { background: var(--line); color: #fff; border-color: #555; }
+.bar-btn:hover:not(:disabled) { background: var(--line); color: #fff; border-color: var(--border-hover); }
 .bar-btn.active, .bar-btn[aria-expanded="true"] { border-color: var(--green); color: var(--green); }
 .bar-btn.readonly, .bar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .bar-rec { font-size: 11px; color: var(--accent); animation: recBlink 1.5s infinite; white-space: nowrap; }
@@ -76,7 +80,12 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   padding: 1px 6px; border-radius: 3px; letter-spacing: 0.05em; white-space: nowrap;
 }
 
-#terminal { position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: var(--keys-h); }
+#terminal {
+  position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: var(--keys-h);
+  background: var(--term-bg, var(--bg));
+}
+/* Breathing room so text doesn't touch the edges; FitAddon subtracts this padding */
+#terminal .xterm { padding: 4px 0 0 6px; }
 
 #overlay {
   display: none; position: fixed; inset: 0; padding: 16px;
@@ -88,15 +97,15 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 #overlay p { font-size: 13px; color: var(--muted); margin-bottom: 16px; max-width: 400px; text-align: center; line-height: 1.5; }
 #overlay button {
   padding: 10px 28px; font-size: 13px; cursor: pointer;
-  background: #1a73e8; color: #fff; border: none; border-radius: 6px; transition: background 0.2s;
+  background: var(--blue); color: #fff; border: none; border-radius: 6px; transition: filter 0.2s;
 }
-#overlay button:hover { background: #1557b0; }
+#overlay button:hover { filter: brightness(0.85); }
 
 .toast {
   position: fixed; bottom: calc(16px + var(--keys-h)); left: 50%; transform: translateX(-50%);
   max-width: calc(100vw - 32px); overflow-wrap: anywhere; text-align: center;
   padding: 8px 20px; border-radius: 6px; font-size: 12px;
-  background: var(--raised); border: 1px solid var(--line); color: #aaa;
+  background: var(--raised); border: 1px solid var(--line); color: var(--text-dim);
   z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none;
 }
 .toast.show { opacity: 1; }
@@ -118,7 +127,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 #searchInput:focus { border-color: var(--blue); }
 #searchInput.no-match { border-color: var(--accent); }
 #searchBar button {
-  background: var(--raised); border: 1px solid var(--line); color: #aaa; cursor: pointer; font-size: 11px;
+  background: var(--raised); border: 1px solid var(--line); color: var(--text-dim); cursor: pointer; font-size: 11px;
   padding: 2px 8px; border-radius: 3px; min-width: 28px;
 }
 #searchBar button:hover { background: var(--line); color: #fff; }
@@ -135,12 +144,12 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .theme-list { display: flex; flex-direction: column; gap: 2px; }
 .theme-opt {
   display: flex; align-items: center; gap: 8px; padding: 5px 8px;
-  border: none; background: transparent; color: #aaa; cursor: pointer;
+  border: none; background: transparent; color: var(--text-dim); cursor: pointer;
   font-size: 11px; border-radius: 3px; text-align: left;
 }
 .theme-opt:hover { background: var(--line); color: #fff; }
 .theme-opt[aria-pressed="true"] { color: var(--accent); font-weight: bold; }
-.theme-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #555; flex-shrink: 0; }
+.theme-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-hover); flex-shrink: 0; }
 
 #mobileKeys {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; height: var(--keys-h);
@@ -173,7 +182,7 @@ body.has-mobile-keys { --keys-h: calc(44px + env(safe-area-inset-bottom, 0px)); 
 #filesPanel { min-width: 220px; width: 320px; max-height: 300px; overflow-y: auto; }
 .files-header {
   display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  padding: 6px 10px; font-size: 11px; color: #aaa;
+  padding: 6px 10px; font-size: 11px; color: var(--text-dim);
   border-bottom: 1px solid var(--line); font-weight: bold;
   position: sticky; top: 0; background: var(--panel);
 }
@@ -206,6 +215,10 @@ body.has-mobile-keys { --keys-h: calc(44px + env(safe-area-inset-bottom, 0px)); 
 @media (pointer: coarse) {
   :root { --bar-h: 44px; }
   .bar-btn { min-height: 32px; font-size: 12px; }
+  #searchBar button, .files-header button { min-width: 40px; min-height: 36px; }
+  #searchInput { font-size: 16px; } /* avoid iOS zoom-on-focus */
+  .theme-opt { padding: 10px 8px; font-size: 13px; }
+  .file-item { padding: 12px 10px; font-size: 13px; }
 }
 @media (min-width: 769px) and (pointer: fine) {
   body.has-mobile-keys { --keys-h: 0px; }

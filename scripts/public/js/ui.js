@@ -28,6 +28,7 @@ export function renderUsers(list, myId, released = false) {
   const box = $("users");
   box.replaceChildren(...list.map((u) => {
     const el = document.createElement("span");
+    el.setAttribute("role", "listitem");
     const isAI = u.id === 0, isSelf = u.id === myId;
     el.className = "user-badge" + (isAI ? " ai" : isSelf ? " self" : "")
       + (u.isController ? " controller" : "") + (u.isController && released ? " released" : "");

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <meta name="theme-color" content="#111122">
+  <meta name="color-scheme" content="dark">
   <title>BunTTY</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css" integrity="sha384-tStR1zLfWgsiXCF3IgfB3lBa8KmBe/lG287CL9WCeKgQYcp1bjb4/+mwN6oti4Co" crossorigin="anonymous">
   <link rel="stylesheet" href="/public/css/style.css">
@@ -14,7 +15,7 @@
     <span class="bar-sep" aria-hidden="true">|</span>
     <span class="bar-status off" id="status" role="status" aria-live="polite">Conectando...</span>
     <span class="bar-readonly" id="readonlyBadge" hidden>SOLO LECTURA</span>
-    <div class="bar-users" id="users" aria-label="Usuarios conectados"></div>
+    <div class="bar-users" id="users" role="list" aria-label="Usuarios conectados"></div>
     <div class="bar-controls">
       <span class="bar-rec" id="recIndicator" title="Grabando sesión"><span aria-hidden="true">&#9679;</span> REC</span>
       <button type="button" class="bar-btn" id="btnRec" title="Descargar grabación (.cast)">&#x2B07; .cast</button>

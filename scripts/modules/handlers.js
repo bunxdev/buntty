@@ -1,12 +1,9 @@
 import { state, normalizeSessionId, sanitizeName } from "./state.js";
-import { createSession, recordEvent } from "./session.js";
+import { createSession, recordEvent, MAX_SESSIONS } from "./session.js";
 import { addClient, removeClient, getClientByWs, getClientsForSession, broadcast, broadcastState, broadcastControlChanged } from "./clients.js";
-import { uploadPath, MAX_UPLOAD_BYTES } from "./uploads.js";
-import { mkdir, rename, unlink } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { saveUpload, MAX_UPLOAD_BYTES } from "./uploads.js";
 
 const ipOf = (ws) => String(ws.data?.ip || "?").replace(/[^0-9a-fA-F.:]/g, "?");
-const MAX_SESSIONS = Number(process.env.BT_MAX_SESSIONS) || 50;
 
 export function onOpen(ws) {
   const url = new URL(ws.data?.url || "http://x"), sessionId = normalizeSessionId(url.searchParams.get("session"));
@@ -71,7 +68,7 @@ export function handOffControl(session, sessionId, candidates) {
 }
 
 // Resize the PTY to a client's last reported viewport, recording only real changes.
-function applySize(session, size) {
+export function applySize(session, size) {
   if (!size || session.terminal.closed) return;
   const cur = session.size || { cols: session.recordingHeader.width, rows: session.recordingHeader.height };
   if (cur.cols === size.cols && cur.rows === size.rows) return;
@@ -82,18 +79,12 @@ function applySize(session, size) {
 
 async function handleUpload(ws, client, msg) {
   if (typeof msg.data !== "string" || msg.data.length > Math.ceil(MAX_UPLOAD_BYTES / 3) * 4 + 4) throw new Error("File exceeds 10MB limit");
-  const target = uploadPath(client.sessionId, msg.name);
-  if (!target) throw new Error("Invalid filename");
-  const { dir, path: dest, name: safeName } = target;
-  await mkdir(dir, { recursive: true });
-  const buf = Buffer.from(msg.data, "base64");
-  if (buf.length > MAX_UPLOAD_BYTES) throw new Error("File exceeds 10MB limit");
-  // Write to a hidden temp file and rename over the target: rename replaces a symlink planted at
-  // dest instead of writing through it, and readers never see a half-written file.
-  const tmp = `${dir}/.upload-${randomUUID()}`;
-  try { await Bun.write(tmp, buf); await rename(tmp, dest); }
-  catch (err) { await unlink(tmp).catch(() => {}); throw err; }
-  ws.send(JSON.stringify({ type: "upload_complete", name: safeName, path: dest, size: buf.length }));
-  broadcast(client.sessionId, { type: "output", data: `\r\n\x1b[33m[BunTTY]\x1b[0m File uploaded: ${dest} (${buf.length} bytes)\r\n` });
-  console.log(`[BunTTY] ${client.name} uploaded ${safeName} (${buf.length} bytes) to ${dest} (ip: ${ipOf(ws)})`);
+  const { name: safeName, path: dest, size } = await saveUpload(client.sessionId, msg.name, Buffer.from(msg.data, "base64"));
+  ws.send(JSON.stringify({ type: "upload_complete", name: safeName, path: dest, size }));
+  announceUpload(client.sessionId, dest, size);
+  console.log(`[BunTTY] ${client.name} uploaded ${safeName} (${size} bytes) to ${dest} (ip: ${ipOf(ws)})`);
 }
+
+// Tell everyone watching the session that a file landed (both upload paths use this).
+export const announceUpload = (sessionId, dest, size) =>
+  broadcast(sessionId, { type: "output", data: `\r\n\x1b[33m[BunTTY]\x1b[0m File uploaded: ${dest} (${size} bytes)\r\n` });

@@ -4,6 +4,7 @@ import { broadcast } from "./clients.js";
 const MAX_HISTORY_LENGTH = 2_000_000;
 // Trim lazily: Bun concatenates strings as ropes, so slicing on every chunk would copy ~2MB per output event.
 const HISTORY_SLACK = 256_000;
+export const MAX_SESSIONS = Number(process.env.BT_MAX_SESSIONS) || 50;
 export const MAX_RECORDING_EVENTS = 50_000;
 export const MAX_RECORDING_BYTES = 50 * 1024 * 1024;
 const appendHistory = (history, output) => {
