@@ -1,18 +1,24 @@
+# Security notes:
+# - Ports bind to 127.0.0.1 by default. To reach BunTTY from the LAN set BT_BIND=0.0.0.0
+#   AND BT_TOKEN (without a token only loopback/private IPs are accepted).
+# - /var/run/docker.sock gives these containers root on the host. Remove it if the
+#   agents don't need to drive Docker.
 services:
   dev:
     image: debian:bookworm-slim
     container_name: dev
     hostname: dev
     ports:
-      - "0.0.0.0:3000:3000"
+      - "${BT_BIND:-127.0.0.1}:3000:3000"
     working_dir: /scripts
     volumes:
       - ./scripts:/scripts
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.claude:/root/.claude
+    security_opt:
+      - no-new-privileges:true
     environment:
       - BT_ALLOWED_HOSTS=host.docker.internal
-      # Root shell on 0.0.0.0: set BT_TOKEN in the host env (same value for both, the grid forwards it).
       - BT_TOKEN=${BT_TOKEN:-}
       - BT_VIEW_TOKEN=${BT_VIEW_TOKEN:-}
     command: ["/bin/bash", "/scripts/main.sh"]
@@ -23,7 +29,7 @@ services:
     container_name: kali
     hostname: kali
     ports:
-      - "0.0.0.0:3001:3000"
+      - "${BT_BIND:-127.0.0.1}:3001:3000"
     working_dir: /scripts
     volumes:
       - ./scripts:/scripts
@@ -33,9 +39,10 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    security_opt:
+      - no-new-privileges:true
     environment:
       - BT_ALLOWED_HOSTS=host.docker.internal
-      # Root shell on 0.0.0.0: set BT_TOKEN in the host env (same value for both, the grid forwards it).
       - BT_TOKEN=${BT_TOKEN:-}
       - BT_VIEW_TOKEN=${BT_VIEW_TOKEN:-}
       - BT_FRAME_ANCESTORS=* http://localhost:3000 http://host.docker.internal:3000
