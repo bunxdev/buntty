@@ -9,6 +9,14 @@ export function handleStatus(sessionId) {
     controller: session?.controllerId ?? null });
 }
 
+export function handleScreen(sessionId) {
+  const session = state.sessions.get(sessionId);
+  if (!session) return Response.json({ error: "No active session" }, { status: 400 });
+  const history = session.history || "";
+  const last = history.slice(-4000);
+  return Response.json({ sessionId, screen: last });
+}
+
 export async function handleInput(req, sessionId) {
   const body = await req.json().catch(() => null);
   return !body?.data ? Response.json({ error: "Missing data" }, { status: 400 })

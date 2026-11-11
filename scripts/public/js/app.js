@@ -8,7 +8,7 @@ let myId = null, controllerId = null, justReleased = false;
 function handleMsg(msg, raw) {
   if (raw) return getTerminal().write(raw);
   (msg.type === "history" || msg.type === "output") && msg.data && getTerminal().write(msg.data);
-  msg.type === "welcome" && (myId = msg.clientId, controllerId = msg.controllerId, hideOverlay(), renderUsers(msg.clients, myId), updateUI(myId, controllerId));
+  msg.type === "welcome" && (myId = msg.clientId, controllerId = msg.controllerId, hideOverlay(), renderUsers(msg.clients, myId), updateUI(myId, controllerId), fitTerminal());
   msg.type === "state" && (controllerId = msg.controllerId, renderUsers(msg.clients, myId, justReleased), justReleased = false, updateUI(myId, controllerId));
   msg.type === "control_changed" && (controllerId = msg.controllerId, msg.controllerId === 0 ? showToast("Sediste el control a la IA", "error") : null);
   msg.type === "error" && showOverlay(msg.message, true);

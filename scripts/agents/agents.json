@@ -1,5 +1,6 @@
 {
   "grid": "3x2",
+  "launch": "./agents/launch.sh",
   "agents": [
     {
       "session": 1,
@@ -7,7 +8,8 @@
       "dir": "designer",
       "role": "UI/UX Designer",
       "color": "#e74c3c",
-      "description": "Diseño de interfaces, componentes y experiencia de usuario"
+      "description": "Diseño de interfaces, componentes y experiencia de usuario",
+      "workspace": "/scripts/agents/designer/workspace"
     },
     {
       "session": 2,
@@ -15,7 +17,8 @@
       "dir": "backend",
       "role": "Backend Developer",
       "color": "#3498db",
-      "description": "Lógica del servidor, base de datos y arquitectura"
+      "description": "Lógica del servidor, base de datos y arquitectura",
+      "workspace": "/scripts/agents/backend/workspace"
     },
     {
       "session": 3,
@@ -23,7 +26,8 @@
       "dir": "api",
       "role": "Bun API Expert",
       "color": "#2ecc71",
-      "description": "Diseño y construcción de APIs con Bun"
+      "description": "Diseño y construcción de APIs con Bun",
+      "workspace": "/scripts/agents/api/workspace"
     },
     {
       "session": 4,
@@ -31,7 +35,8 @@
       "dir": "red-team",
       "role": "Offensive Security",
       "color": "#ff4444",
-      "description": "Pruebas de penetración y búsqueda de vulnerabilidades"
+      "description": "Pruebas de penetración y búsqueda de vulnerabilidades",
+      "workspace": "/scripts/agents/red-team/workspace"
     },
     {
       "session": 5,
@@ -39,7 +44,8 @@
       "dir": "blue-team",
       "role": "Defensive Security",
       "color": "#4488ff",
-      "description": "Defensa, monitoreo y hardening del sistema"
+      "description": "Defensa, monitoreo y hardening del sistema",
+      "workspace": "/scripts/agents/blue-team/workspace"
     },
     {
       "session": 6,
@@ -47,7 +53,8 @@
       "dir": "purple-team",
       "role": "Security Analysis",
       "color": "#9b59b6",
-      "description": "Análisis cruzado entre Red y Blue, validación de controles"
+      "description": "Análisis cruzado entre Red y Blue, validación de controles",
+      "workspace": "/scripts/agents/purple-team/workspace"
     }
   ]
 }
