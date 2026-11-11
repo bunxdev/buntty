@@ -3,51 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111122">
+  <meta name="color-scheme" content="dark">
   <title>BunTTY Replay</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.7.1/dist/bundle/asciinema-player.css" integrity="sha384-1qwUiudFMCvecF1nL2TzvD0VmUzAWvGItfIZYi+pIyfaWqHruuO4bUt9MbvGgEhM" crossorigin="anonymous">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; background: #0a0a0a; color: #e0e0e0; font-family: monospace; }
-    .header {
-      height: 40px; background: #111122; display: flex; align-items: center;
-      padding: 0 16px; gap: 12px; border-bottom: 1px solid #2a2a3e;
+    :root {
+      --bg: #0a0a0a; --panel: #111122; --raised: #1a1a2e; --line: #2a2a3e;
+      --border: #333; --border-hover: #555; --muted: #8a8aa0; --text: #e0e0e0;
+      --text-dim: #aaa; --accent: #e74c3c; --blue: #3498db; color-scheme: dark;
     }
-    .header .brand { color: #e74c3c; font-weight: bold; font-size: 13px; }
-    .header .sep { color: #333; }
-    .header .title { color: #888; font-size: 12px; }
-    .header .session { color: #3498db; font-size: 12px; font-weight: bold; }
-    .header .actions { margin-left: auto; display: flex; gap: 8px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: monospace; }
+    .header {
+      height: 40px; background: var(--panel); display: flex; align-items: center;
+      padding: 0 16px; gap: 12px; border-bottom: 1px solid var(--line);
+    }
+    .header .brand { color: var(--accent); font-weight: bold; font-size: 13px; }
+    .header .sep { color: var(--border); }
+    .header .title { color: var(--muted); font-size: 12px; }
+    .header .session {
+      color: var(--blue); font-size: 12px; font-weight: bold;
+      min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .header .actions { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; }
     .header .btn {
       padding: 4px 12px; font-size: 11px; cursor: pointer; border-radius: 4px;
-      border: 1px solid #333; background: #1a1a2e; color: #aaa; font-family: monospace;
-      text-decoration: none; display: inline-block;
+      border: 1px solid var(--border); background: var(--raised); color: var(--text-dim); font-family: monospace;
+      text-decoration: none; display: inline-block; white-space: nowrap;
     }
-    .header .btn:hover { background: #2a2a3e; color: #fff; border-color: #555; }
+    .header .btn:hover { background: var(--line); color: #fff; border-color: var(--border-hover); }
     .header .btn[hidden] { display: none; }
-    .header .btn:focus-visible { outline: 2px solid #3498db; outline-offset: 1px; }
+    .header .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
     #player-container {
-      width: 100%; height: calc(100dvh - 40px); padding: 20px; overflow: auto;
+      width: 100%; height: calc(100vh - 40px); height: calc(100dvh - 40px); padding: 20px; overflow: auto;
       display: flex; justify-content: center; align-items: center;
     }
     #player-container .ap-wrapper { width: 100% !important; max-width: 960px; height: 100% !important; }
     .no-session {
-      text-align: center; color: #8a8aa0; font-size: 14px; line-height: 1.6; padding: 16px;
+      text-align: center; color: var(--muted); font-size: 14px; line-height: 1.6; padding: 16px;
     }
-    .no-session code { color: #3498db; background: #1a1a2e; padding: 2px 8px; border-radius: 3px; }
+    .no-session code { color: var(--blue); background: var(--raised); padding: 2px 8px; border-radius: 3px; }
     @media (max-width: 600px) {
       .header { padding: 0 8px; gap: 8px; }
       .header .sep, .header .title { display: none; }
       #player-container { padding: 8px; }
     }
+    @media (pointer: coarse) { .header { height: 48px; } .header .btn { padding: 8px 12px; } #player-container { height: calc(100dvh - 48px); } }
   </style>
 </head>
 <body>
   <header class="header">
-    <span class="brand">BunTTY</span>
+    <h1 class="brand">BunTTY</h1>
     <span class="sep" aria-hidden="true">|</span>
     <span class="title">Replay</span>
     <span class="session" id="sessionLabel"></span>
-    <nav class="actions">
+    <nav class="actions" aria-label="Acciones de la grabación">
       <a class="btn" id="downloadBtn" title="Descargar archivo .cast" download>Descargar .cast</a>
       <a class="btn" href="/" id="backBtn">Volver al terminal</a>
     </nav>
