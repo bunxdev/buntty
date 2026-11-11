@@ -190,7 +190,10 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
     console.error(`[BunTTY][ERR] ${new Date().toISOString()} ${logSafe(err?.stack || err)}`);
     return sec(new Response("Internal Server Error", { status: 500 }));
   },
-  websocket: { open: onOpen, message: onMessage, close: onClose, maxPayloadLength: 16 * 1024 * 1024 },
+  // A client that can't keep up is disconnected instead of silently dropping output (which would
+  // leave its terminal garbled); on reconnect it gets a consistent copy from the history message.
+  websocket: { open: onOpen, message: onMessage, close: onClose, maxPayloadLength: 16 * 1024 * 1024,
+    backpressureLimit: 8 * 1024 * 1024, closeOnBackpressureLimit: true },
 });
 
 const proto = tlsOpts ? "https" : "http";
