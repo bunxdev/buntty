@@ -33,27 +33,27 @@
       "session": 4,
       "name": "Red Team",
       "dir": "red-team",
-      "role": "Kali Offensive",
+      "role": "Offensive Security",
       "color": "#ff4444",
-      "description": "Pentesting y búsqueda de vulnerabilidades con Kali Linux",
+      "description": "Pruebas de penetración y búsqueda de vulnerabilidades",
       "workspace": "/scripts/agents/red-team/workspace"
     },
     {
       "session": 5,
       "name": "Blue Team",
       "dir": "blue-team",
-      "role": "Kali Defensive",
+      "role": "Defensive Security",
       "color": "#4488ff",
-      "description": "Defensa, monitoreo y hardening con Kali Linux",
+      "description": "Defensa, monitoreo y hardening del sistema",
       "workspace": "/scripts/agents/blue-team/workspace"
     },
     {
       "session": 6,
       "name": "Purple Team",
       "dir": "purple-team",
-      "role": "Kali Analysis",
+      "role": "Security Analysis",
       "color": "#9b59b6",
-      "description": "Análisis cruzado Red/Blue con Kali Linux, validación de controles",
+      "description": "Análisis cruzado entre Red y Blue, validación de controles",
       "workspace": "/scripts/agents/purple-team/workspace"
     }
   ]
