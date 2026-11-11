@@ -14,6 +14,14 @@ const PORT = Number(process.env.PORT) || 3000;
 const TOKEN = process.env.BT_TOKEN || "";
 const VIEW_TOKEN = process.env.BT_VIEW_TOKEN || "";
 const COOKIE = `bt_auth_${PORT}`;
+// Fail closed on configs that silently weaken auth.
+if (TOKEN && VIEW_TOKEN && TOKEN === VIEW_TOKEN) {
+  console.error("[BunTTY][SEC] BT_VIEW_TOKEN equals BT_TOKEN: view-only users would get full shell access. Refusing to start.");
+  process.exit(1);
+}
+for (const [name, t] of [["BT_TOKEN", TOKEN], ["BT_VIEW_TOKEN", VIEW_TOKEN]])
+  if (t && t.length < 16) console.warn(`[BunTTY][SEC] ${name} is only ${t.length} chars; use 32+ random chars (e.g. openssl rand -hex 32).`);
+if (VIEW_TOKEN && !TOKEN) console.warn("[BunTTY][SEC] BT_VIEW_TOKEN without BT_TOKEN: nobody can open a new shell (only full tokens may).");
 const safeEq = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
 const cookieToken = (req) => {
   const m = (req.headers.get("cookie") || "").match(new RegExp(`(?:^|;\\s*)${COOKIE}=([^;]+)`));
