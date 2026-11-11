@@ -59,6 +59,9 @@ const tlsOpts = process.env.BT_TLS_CERT && process.env.BT_TLS_KEY
   ? { cert: Bun.file(process.env.BT_TLS_CERT), key: Bun.file(process.env.BT_TLS_KEY) } : undefined;
 
 const FRAME_ANCESTORS = process.env.BT_FRAME_ANCESTORS || "'self'";
+// Framing a root shell from any origin is clickjacking. The README forbids `*`; warn loudly
+// if an operator set it, so the footgun isn't silent.
+if (/(^|\s)\*(\s|$)/.test(FRAME_ANCESTORS)) console.warn("[BunTTY][SEC] BT_FRAME_ANCESTORS allows '*': ANY website can frame this root shell (clickjacking). Use explicit origins.");
 const CSP = [
   "default-src 'self'",
   "script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'",
