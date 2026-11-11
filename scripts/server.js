@@ -5,7 +5,9 @@ import { timingSafeEqual } from "node:crypto";
 import { handleStatus, handleInput, handleTakeControl, handleReleaseControl, handleSessions, handleCreateSession, handleDeleteSession, handleResize, handleUpload, handleScreen, handleDownload, handleUploads, handleFileDownload, handleRecording, handleRecordingStatus } from "./modules/api.js";
 import { MAX_UPLOAD_BYTES } from "./modules/uploads.js";
 import { onOpen, onMessage, onClose } from "./modules/handlers.js";
-import { normalizeSessionId } from "./modules/state.js";
+import { normalizeSessionId, inside } from "./modules/state.js";
+import { realpathSync } from "node:fs";
+import { realpath, stat } from "node:fs/promises";
 
 const agentsConfig = JSON.parse(require("fs").readFileSync("./agents/agents.json", "utf8"));
 const gridRender = pug.compileFile("./views/grid.pug");
@@ -143,6 +145,7 @@ const needsFull = (route, method) => route._full === true || (Array.isArray(rout
 const apiIndex = (role) => Response.json({ version: API_VERSION, role, routes: Object.entries(API).map(([path, r]) => ({
   path, methods: methods(r), full: methods(r).filter(m => needsFull(r, m)), description: r._doc })) });
 const indexHtml = Bun.file("./public/index.html");
+const PUBLIC_DIR = realpathSync("./public");
 
 const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequestBodySize: 16 * 1024 * 1024,
   async fetch(req, server) {
@@ -152,8 +155,9 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
     if (!hostOk(req)) return secLog("forbidden_host", req, ip), deny("Forbidden host", 403, u.pathname);
     if (u.pathname.startsWith("/public/")) {
       if (u.pathname.includes("..")) return deny("Forbidden", 403, u.pathname);
-      const f = Bun.file(`.${u.pathname}`);
-      return sec(await f.exists() ? new Response(f) : new Response("Not Found", { status: 404 }));
+      const real = await realpath(`.${u.pathname}`).catch(() => null);
+      const st = real && inside(PUBLIC_DIR, real) ? await stat(real).catch(() => null) : null;
+      return sec(st?.isFile() ? new Response(Bun.file(real)) : new Response("Not Found", { status: 404 }));
     }
     if (u.pathname === "/replay") return sec(html(Bun.file("./public/replay.html")));
     if (u.pathname === "/logout") return sec(new Response("Logged out\n", { headers: { "Content-Type": "text/plain", "Cache-Control": "no-store",
