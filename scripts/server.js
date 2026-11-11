@@ -34,6 +34,15 @@ const getRole = (req, u) => {
 const ALLOWED_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", osHostname(),
   ...(process.env.BT_ALLOWED_HOSTS || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean)]);
 const ALLOWED_ORIGINS = new Set((process.env.BT_ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean));
+// Without tokens the Host header is the only gate, and clients control it. Also require a
+// loopback/private source address so an exposed port never hands a shell to the internet.
+const INSECURE_ANY_IP = process.env.BT_INSECURE_ANY_IP === "1";
+const privateIp = (ip) => {
+  const a = String(ip).toLowerCase().replace(/^::ffff:/, "");
+  return a === "::1" || /^127\./.test(a) || /^10\./.test(a) || /^192\.168\./.test(a) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(a) || /^169\.254\./.test(a) || /^f[cd][0-9a-f]{2}:/.test(a) || /^fe80:/.test(a);
+};
+const sourceOk = (ip) => TOKEN || VIEW_TOKEN || INSECURE_ANY_IP || privateIp(ip);
 const hostOk = (req) => {
   if (TOKEN || VIEW_TOKEN) return true;
   const h = (req.headers.get("host") || "").toLowerCase().replace(/:\d+$/, "");
@@ -61,7 +70,11 @@ const CSP = [
   "object-src 'none'", "base-uri 'none'", "form-action 'self'",
   `frame-ancestors ${FRAME_ANCESTORS}`,
 ].join("; ");
-const secHeaders = { "Content-Security-Policy": CSP, "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
+const secHeaders = { "Content-Security-Policy": CSP, "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+  "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Resource-Policy": "same-origin",
+  "X-Permitted-Cross-Domain-Policies": "none" };
+if (tlsOpts) secHeaders["Strict-Transport-Security"] = "max-age=31536000";
 if (FRAME_ANCESTORS === "'none'") secHeaders["X-Frame-Options"] = "DENY";
 else if (FRAME_ANCESTORS === "'self'") secHeaders["X-Frame-Options"] = "SAMEORIGIN";
 // Route-specific headers win (e.g. /api/files sets a sandbox CSP for untrusted uploads).
@@ -81,6 +94,7 @@ const AUTH_FAIL_LIMIT = 20, AUTH_FAIL_WINDOW = 5 * 60_000, authFails = new Map()
 const authBlocked = (ip) => { const b = authFails.get(ip); return !!b && Date.now() - b.start < AUTH_FAIL_WINDOW && b.count >= AUTH_FAIL_LIMIT; };
 const noteAuthFail = (ip) => {
   const now = Date.now(), b = authFails.get(ip);
+  if (!b && authFails.size >= 10_000) authFails.delete(authFails.keys().next().value); // bound memory
   if (!b || now - b.start >= AUTH_FAIL_WINDOW) authFails.set(ip, { start: now, count: 1 }); else b.count++;
 };
 setInterval(() => { const now = Date.now(); for (const [k, b] of authFails) if (now - b.start >= AUTH_FAIL_WINDOW) authFails.delete(k); }, 60_000).unref?.();
@@ -105,6 +119,7 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
   async fetch(req, server) {
     const u = new URL(req.url), sessionId = normalizeSessionId(u.searchParams.get("session"));
     const ip = server.requestIP(req)?.address || "?";
+    if (!sourceOk(ip)) return secLog("forbidden_source", req, ip), deny("Forbidden", 403, u.pathname);
     if (!hostOk(req)) return secLog("forbidden_host", req, ip), deny("Forbidden host", 403, u.pathname);
     if (u.pathname.startsWith("/public/")) {
       if (u.pathname.includes("..")) return deny("Forbidden", 403, u.pathname);
@@ -112,19 +127,19 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
       return sec(await f.exists() ? new Response(f) : new Response("Not Found", { status: 404 }));
     }
     if (u.pathname === "/replay") return sec(html(Bun.file("./public/replay.html")));
-    if (u.pathname === "/grid") {
-      const dim = (k, def) => Math.max(1, Math.min(12, Math.trunc(Number(u.searchParams.get(k))) || def));
-      const cols = dim("cols", 3), rows = dim("rows", 2);
-      const host = req.headers.get("host") || "localhost:3000";
-      return sec(new Response(gridRender({ agents: agentsConfig.agents, cols, rows, host, token: u.searchParams.get("token") || "" }), { headers: { "Content-Type": "text/html" } }));
-    }
     if (authBlocked(ip)) return secLog("auth_rate_limited", req, ip), deny("Too Many Requests", 429, u.pathname);
     const role = getRole(req, u);
     if (!role) return noteAuthFail(ip), secLog("auth_failed", req, ip), deny("Unauthorized", 401, u.pathname);
     if (sessionId === null && (u.pathname === "/ws" || u.pathname.startsWith("/api/"))) return secLog("bad_session", req, ip), deny("Invalid session", 400, u.pathname);
+    if (u.pathname === "/grid") {
+      const dim = (k, def) => Math.max(1, Math.min(12, Math.trunc(Number(u.searchParams.get(k))) || def));
+      const cols = dim("cols", 3), rows = dim("rows", 2);
+      const host = req.headers.get("host") || "localhost:3000";
+      return sec(new Response(gridRender({ agents: agentsConfig.agents, cols, rows, host, token: u.searchParams.get("token") || "" }), { headers: { "Content-Type": "text/html", "Cache-Control": "no-store" } }));
+    }
     if (u.pathname === "/ws") {
       if (!originOk(req)) return secLog("forbidden_origin", req, ip), deny("Forbidden origin", 403, u.pathname);
-      return server.upgrade(req, { data: { url: req.url, role } }) ? undefined : deny("Upgrade failed", 400, u.pathname);
+      return server.upgrade(req, { data: { url: req.url, role, ip } }) ? undefined : deny("Upgrade failed", 400, u.pathname);
     }
     if (req.method !== "GET" && !originOk(req)) return secLog("forbidden_origin", req, ip), deny("Forbidden origin", 403, u.pathname);
     if (req.method === "GET" && u.searchParams.has("token") && !u.pathname.startsWith("/api/")) {
@@ -141,7 +156,11 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
       if (!route) r = json({ error: "Not found" }, 404);
       else if (!h) r = new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { "Content-Type": "application/json", Allow: allowed(route) } });
       else if (route._full && role !== "full") r = deny("Requires a full-access token", 403, u.pathname);
-      else r = await h(req, sessionId, u);
+      else {
+        if (req.method === "POST") secLog("api_" + u.pathname.slice(5).replace(/\W/g, "_"), req, ip, `role=${role} session=${logSafe(sessionId)}`);
+        r = await h(req, sessionId, u);
+      }
+      r.headers.set("Cache-Control", "no-store");
     } else if (req.method === "GET" || req.method === "HEAD") {
       r = new Response(indexHtml, { headers: { "Content-Type": "text/html", "Cache-Control": "no-store" } });
     } else r = new Response("Not Found", { status: 404 });
@@ -157,4 +176,5 @@ const server = serve({ port: PORT, hostname: "0.0.0.0", tls: tlsOpts, maxRequest
 
 const proto = tlsOpts ? "https" : "http";
 const features = [TOKEN && "auth", VIEW_TOKEN && "view-token", tlsOpts && "tls", FRAME_ANCESTORS !== "'self'" && "csp"].filter(Boolean).join(", ") || "open (host-pinned)";
+if (!TOKEN && !VIEW_TOKEN) console.warn(`[BunTTY][SEC] No BT_TOKEN set: access limited to loopback/private IPs${INSECURE_ANY_IP ? " (DISABLED by BT_INSECURE_ANY_IP=1)" : ""}. Set BT_TOKEN before exposing this port.`);
 console.log(`\n  BunTTY v5.3 | ${proto}://${server.hostname}:${server.port} | Shell: ${process.env.SHELL || "bash"} | ${features} | rec: on\n`);
