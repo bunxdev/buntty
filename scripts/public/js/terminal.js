@@ -12,6 +12,7 @@ export function createTerminal(el) {
   try { const imgAddon = new ImageAddon.ImageAddon(); term.loadAddon(imgAddon); } catch {}
   term.open(el); fitAddon.fit();
   document.body.style.background = theme.background;
+  document.documentElement.style.setProperty("--term-bg", theme.background);
   return term;
 }
 
