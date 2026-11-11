@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import pug from "pug";
-import { handleStatus, handleInput, handleTakeControl, handleScreen, handleDownload, handleUploads, handleFileDownload } from "./modules/api.js";
+import { handleStatus, handleInput, handleTakeControl, handleScreen, handleDownload, handleUploads, handleFileDownload, handleRecording, handleRecordingStatus } from "./modules/api.js";
 import { onOpen, onMessage, onClose } from "./modules/handlers.js";
 import { normalizeSessionId } from "./modules/state.js";
 
@@ -42,6 +42,8 @@ const server = serve({ port: Number(process.env.PORT) || 3000, hostname: "0.0.0.
       : u.pathname === "/api/download" ? handleDownload(sessionId)
       : u.pathname === "/api/uploads" ? handleUploads(sessionId)
       : u.pathname === "/api/files" ? handleFileDownload(sessionId, u.searchParams.get("file"))
+      : u.pathname === "/api/recording" ? handleRecording(sessionId)
+      : u.pathname === "/api/recording/status" ? handleRecordingStatus(sessionId)
       : u.pathname === "/api/input" && req.method === "POST" ? handleInput(req, sessionId)
       : u.pathname === "/api/take-control" && req.method === "POST" ? handleTakeControl(sessionId)
       : req.method === "GET" ? new Response(Bun.file("./public/index.html"), { headers: { "Content-Type": "text/html", "Cache-Control": "no-store" } })
@@ -54,4 +56,4 @@ const server = serve({ port: Number(process.env.PORT) || 3000, hostname: "0.0.0.
 const proto = tlsOpts ? "https" : "http";
 const cspCustom = FRAME_ANCESTORS !== "'self'";
 const features = [TOKEN && "auth", tlsOpts && "tls", cspCustom && "csp"].filter(Boolean).join(", ") || "open";
-console.log(`\n  BunTTY v5.2 | ${proto}://${server.hostname}:${server.port} | Shell: ${process.env.SHELL || "bash"} | ${features}\n`);
+console.log(`\n  BunTTY v5.3 | ${proto}://${server.hostname}:${server.port} | Shell: ${process.env.SHELL || "bash"} | ${features} | rec: on\n`);

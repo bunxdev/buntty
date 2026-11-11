@@ -51,6 +51,24 @@ export async function handleUploads(sessionId) {
   } catch { return Response.json({ sessionId, files: [] }); }
 }
 
+export function handleRecording(sessionId) {
+  const session = state.sessions.get(sessionId);
+  if (!session) return Response.json({ error: "No active session" }, { status: 400 });
+  const lines = [JSON.stringify(session.recordingHeader)];
+  for (const ev of session.recording) lines.push(JSON.stringify(ev));
+  const cast = lines.join("\n") + "\n";
+  return new Response(cast, { headers: {
+    "Content-Type": "application/x-asciicast",
+    "Content-Disposition": `attachment; filename="buntty-${sessionId.replace(/\//g, "")}-${Date.now()}.cast"` } });
+}
+
+export function handleRecordingStatus(sessionId) {
+  const session = state.sessions.get(sessionId);
+  if (!session) return Response.json({ error: "No active session" }, { status: 400 });
+  const elapsed = (Date.now() - session.createdAt) / 1000;
+  return Response.json({ sessionId, recording: true, events: session.recording.length, elapsed: Math.round(elapsed), maxEvents: 50000 });
+}
+
 export async function handleFileDownload(sessionId, fileName) {
   if (!fileName) return Response.json({ error: "Missing file parameter" }, { status: 400 });
   const safeName = basename(fileName);

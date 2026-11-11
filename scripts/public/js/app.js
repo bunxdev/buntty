@@ -54,6 +54,7 @@ function initSearch() {
   initMobileKeys();
   initFileTransfer();
   initFilesPanel();
+  initRecording();
   connect(() => { fitTerminal(); term.focus(); }, handleMsg, () => showOverlay("Conexion perdida.", true));
 })();
 
@@ -92,6 +93,13 @@ function initFilesPanel() {
   };
   document.getElementById("filesClose").onclick = () => { panel.hidden = true; };
   document.addEventListener("click", (e) => { !panel.contains(e.target) && e.target !== btn && (panel.hidden = true); });
+}
+
+function initRecording() {
+  const session = encodeURIComponent(location.pathname.replace(/\/+$/, "") || "/");
+  document.getElementById("btnRec").onclick = () => {
+    window.open(`/api/recording?session=${session}`, "_blank");
+  };
 }
 
 function initMobileKeys() {

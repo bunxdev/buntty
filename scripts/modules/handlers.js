@@ -19,8 +19,14 @@ export function onOpen(ws) {
 export function onMessage(ws, message) {
   const client = getClientByWs(ws); if (!client) return; const session = state.sessions.get(client.sessionId);
   try { const msg = JSON.parse(String(message));
-    msg.type === "input" && session && !client.readonly && client.id === session.controllerId && !session.terminal.closed && session.terminal.write(msg.data);
-    msg.type === "resize" && session && !session.terminal.closed && (session.terminal.resize(Math.max(1, Math.min(500, msg.cols || 80)), Math.max(1, Math.min(200, msg.rows || 24))));
+    if (msg.type === "input" && session && !client.readonly && client.id === session.controllerId && !session.terminal.closed) {
+      session.terminal.write(msg.data);
+      if (session.recording.length < 50000) session.recording.push([(Date.now() - session.createdAt) / 1000, "i", msg.data]);
+    }
+    if (msg.type === "resize" && session && !session.terminal.closed) {
+      session.terminal.resize(Math.max(1, Math.min(500, msg.cols || 80)), Math.max(1, Math.min(200, msg.rows || 24)));
+      if (session.recording.length < 50000) session.recording.push([(Date.now() - session.createdAt) / 1000, "r", `${msg.cols}x${msg.rows}`]);
+    }
     if (msg.type === "take_control" && session && !client.readonly) { session.controllerId = client.id; broadcastControlChanged(client.sessionId, client.id, client.name); console.log(`[BunTTY] ${client.name} took control of ${client.sessionId}`); }
     if (msg.type === "release_control" && session && session.controllerId === client.id) {
       const others = getClientsForSession(client.sessionId).filter(c => c.id !== client.id);
