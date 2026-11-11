@@ -17,4 +17,7 @@ html(lang="es")
   body
     .grid
       each agent in agents
-        iframe(src=`/${agent.session}?agent=${encodeURIComponent(agent.name)}&role=${encodeURIComponent(agent.role)}&minimal=1`)
+        if agent.session > 3
+          iframe(src=`//${host.split(':')[0]}:3001/${agent.session}?agent=${encodeURIComponent(agent.name)}&role=${encodeURIComponent(agent.role)}&minimal=1`)
+        else
+          iframe(src=`/${agent.session}?agent=${encodeURIComponent(agent.name)}&role=${encodeURIComponent(agent.role)}&minimal=1`)

@@ -19,12 +19,9 @@ const tlsOpts = process.env.BT_TLS_CERT && process.env.BT_TLS_KEY
   ? { cert: Bun.file(process.env.BT_TLS_CERT), key: Bun.file(process.env.BT_TLS_KEY) } : undefined;
 
 const FRAME_ANCESTORS = process.env.BT_FRAME_ANCESTORS || "'self'";
-const xFrame = FRAME_ANCESTORS === "'none'" ? "DENY" : FRAME_ANCESTORS === "'self'" ? "SAMEORIGIN" : "SAMEORIGIN";
-const secHeaders = {
-  "Content-Security-Policy": `frame-ancestors ${FRAME_ANCESTORS}`,
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": xFrame,
-};
+const secHeaders = { "Content-Security-Policy": `frame-ancestors ${FRAME_ANCESTORS}`, "X-Content-Type-Options": "nosniff" };
+if (FRAME_ANCESTORS === "'none'") secHeaders["X-Frame-Options"] = "DENY";
+else if (FRAME_ANCESTORS === "'self'") secHeaders["X-Frame-Options"] = "SAMEORIGIN";
 const sec = (res) => { for (const [k, v] of Object.entries(secHeaders)) res.headers.set(k, v); return res; };
 
 const server = serve({ port: Number(process.env.PORT) || 3000, hostname: "0.0.0.0", tls: tlsOpts,
@@ -41,7 +38,8 @@ const server = serve({ port: Number(process.env.PORT) || 3000, hostname: "0.0.0.
     if (u.pathname === "/replay") return sec(new Response(Bun.file("./public/replay.html"), { headers: { "Content-Type": "text/html" } }));
     if (u.pathname === "/grid") {
       const cols = Number(u.searchParams.get("cols")) || 3, rows = Number(u.searchParams.get("rows")) || 2;
-      return sec(new Response(gridRender({ agents: agentsConfig.agents, cols, rows }), { headers: { "Content-Type": "text/html" } }));
+      const host = req.headers.get("host") || "localhost:3000";
+      return sec(new Response(gridRender({ agents: agentsConfig.agents, cols, rows, host }), { headers: { "Content-Type": "text/html" } }));
     }
     if (!checkAuth(req)) return sec(new Response("Unauthorized", { status: 401 }));
     const r = u.pathname === "/api/screen" ? handleScreen(sessionId)

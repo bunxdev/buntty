@@ -1,7 +1,6 @@
 services:
   dev:
-    # kalilinux/kali-rolling preferred for security agents (Red/Blue/Purple Team)
-    image: kalilinux/kali-rolling
+    image: debian:bookworm-slim
     container_name: dev
     hostname: dev
     ports:
@@ -10,9 +9,24 @@ services:
     volumes:
       - ./scripts:/scripts
       - /var/run/docker.sock:/var/run/docker.sock
+    command: ["/bin/bash", "/scripts/main.sh"]
+    restart: unless-stopped
+
+  kali:
+    image: kalilinux/kali-rolling
+    container_name: kali
+    hostname: kali
+    ports:
+      - "3001:3000"
+    working_dir: /scripts
+    volumes:
+      - ./scripts:/scripts
+      - /var/run/docker.sock:/var/run/docker.sock
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    environment:
+      - BT_FRAME_ANCESTORS=*
     command: ["/bin/bash", "/scripts/main.sh"]
     restart: unless-stopped
