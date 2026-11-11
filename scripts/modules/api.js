@@ -1,13 +1,23 @@
 import { state, inside } from "./state.js";
-import { writeToSession, recordEvent, recordingFull, MAX_RECORDING_EVENTS, MAX_RECORDING_BYTES } from "./session.js";
-import { getClientsForSession, broadcastControlChanged } from "./clients.js";
-import { handOffControl } from "./handlers.js";
-import { uploadDir, uploadPath } from "./uploads.js";
+import { createSession, destroySession, writeToSession, recordEvent, recordingFull, MAX_SESSIONS, MAX_RECORDING_EVENTS, MAX_RECORDING_BYTES } from "./session.js";
+import { getClientsForSession, broadcast, broadcastControlChanged } from "./clients.js";
+import { handOffControl, applySize, announceUpload } from "./handlers.js";
+import { uploadDir, uploadPath, saveUpload, MAX_UPLOAD_BYTES } from "./uploads.js";
 import { readdir, realpath, stat } from "node:fs/promises";
 
 const noSession = () => Response.json({ error: "No active session" }, { status: 404 });
 const liveSession = (id) => { const s = state.sessions.get(id); return s && !s.terminal.closed ? s : null; };
 const fileStem = (sessionId) => `buntty-${sessionId.replace(/[^a-zA-Z0-9_-]/g, "") || "root"}-${Date.now()}`;
+const fileUrl = (sessionId, name) => `/api/files?session=${encodeURIComponent(sessionId)}&file=${encodeURIComponent(name)}`;
+const MAX_JSON_BYTES = 1024 * 1024;
+// Parse a JSON body, enforcing Content-Type and a size cap even for chunked bodies without Content-Length.
+async function readJson(req) {
+  if (!(req.headers.get("content-type") || "").toLowerCase().startsWith("application/json"))
+    return { error: Response.json({ error: "Content-Type must be application/json" }, { status: 415 }) };
+  const text = await req.text().catch(() => "");
+  if (text.length > MAX_JSON_BYTES) return { error: Response.json({ error: "Request body too large" }, { status: 413 }) };
+  try { return { body: JSON.parse(text) }; } catch { return { error: Response.json({ error: "Invalid JSON body" }, { status: 400 }) }; }
+}
 const attachment = (name) => `attachment; filename="${name.replace(/[^\x20-\x7e]|["\\]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 
 export function handleStatus(sessionId) {
@@ -31,12 +41,33 @@ export function handleScreen(sessionId, u) {
 }
 
 // All live sessions, so API clients can discover ids instead of guessing them.
+const summary = (s) => ({ id: s.id, pid: s.proc?.pid ?? null,
+  active: !s.terminal.closed, controller: s.controllerId ?? null, clients: getClientsForSession(s.id).length,
+  cols: s.size?.cols ?? s.recordingHeader.width, rows: s.size?.rows ?? s.recordingHeader.height,
+  createdAt: new Date(s.createdAt).toISOString() });
+
 export function handleSessions() {
-  const sessions = [...state.sessions.values()].map(s => ({ id: s.id, pid: s.proc?.pid ?? null,
-    active: !s.terminal.closed, controller: s.controllerId ?? null, clients: getClientsForSession(s.id).length,
-    cols: s.size?.cols ?? s.recordingHeader.width, rows: s.size?.rows ?? s.recordingHeader.height,
-    createdAt: new Date(s.createdAt).toISOString() }));
-  return Response.json({ sessions });
+  return Response.json({ sessions: [...state.sessions.values()].map(summary) });
+}
+
+// Idempotent: 201 when a shell was spawned, 200 when the session already existed.
+// Scripts can call this before /api/input instead of needing a browser to open the session first.
+export function handleCreateSession(sessionId) {
+  const existing = liveSession(sessionId);
+  if (existing) return Response.json({ created: false, session: summary(existing) });
+  if (state.sessions.size >= MAX_SESSIONS) return Response.json({ error: "Too many sessions", max: MAX_SESSIONS }, { status: 503 });
+  const session = createSession(sessionId, null);
+  console.log(`[BunTTY] API created session ${sessionId}`);
+  return Response.json({ created: true, session: summary(session) }, { status: 201 });
+}
+
+// Kill the shell. Connected clients get the same session_ended they'd see if it exited on its own.
+export function handleDeleteSession(sessionId) {
+  if (!state.sessions.has(sessionId)) return noSession();
+  broadcast(sessionId, { type: "session_ended" });
+  destroySession(sessionId);
+  console.log(`[BunTTY] API killed session ${sessionId}`);
+  return Response.json({ ok: true, sessionId });
 }
 
 export function handleDownload(sessionId) {
@@ -47,8 +78,8 @@ export function handleDownload(sessionId) {
 }
 
 export async function handleInput(req, sessionId) {
-  if (!(req.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) return Response.json({ error: "Content-Type must be application/json" }, { status: 415 });
-  const body = await req.json().catch(() => null);
+  const { body, error } = await readJson(req);
+  if (error) return error;
   if (typeof body?.data !== "string" || !body.data) return Response.json({ error: "Missing data (non-empty string)" }, { status: 400 });
   const session = liveSession(sessionId);
   if (!session) return noSession();
@@ -76,6 +107,39 @@ export function handleReleaseControl(sessionId) {
   return Response.json({ ok: true, sessionId, controllerId: session.controllerId ?? null });
 }
 
+// Only the controller's viewport drives the PTY (see handlers.js), so the API may resize only
+// while no human holds control: after take-control, or on a headless session.
+export async function handleResize(req, sessionId) {
+  const { body, error } = await readJson(req);
+  if (error) return error;
+  const ok = (v, max) => Number.isInteger(v) && v >= 1 && v <= max;
+  if (!ok(body?.cols, 500) || !ok(body?.rows, 200)) return Response.json({ error: "cols (1-500) and rows (1-200) must be integers" }, { status: 400 });
+  const session = liveSession(sessionId);
+  if (!session) return noSession();
+  if (session.controllerId != null && session.controllerId !== 0)
+    return Response.json({ error: "A user holds control; call take-control first", controllerId: session.controllerId }, { status: 409 });
+  applySize(session, { cols: body.cols, rows: body.rows });
+  return Response.json({ ok: true, sessionId, cols: body.cols, rows: body.rows });
+}
+
+// Raw-body upload: curl --data-binary @file 'http://host/api/upload?session=%2F1&name=file.txt'
+export async function handleUpload(req, sessionId, name) {
+  if (!name) return Response.json({ error: "Missing name parameter" }, { status: 400 });
+  if (!state.sessions.has(sessionId)) return noSession();
+  if (Number(req.headers.get("content-length")) > MAX_UPLOAD_BYTES) return Response.json({ error: "File exceeds 10MB limit" }, { status: 413 });
+  const buf = Buffer.from(await req.arrayBuffer());
+  try {
+    const saved = await saveUpload(sessionId, name, buf);
+    announceUpload(sessionId, saved.path, saved.size);
+    console.log(`[BunTTY] API uploaded ${saved.name} (${saved.size} bytes) to ${saved.path}`);
+    return Response.json({ ok: true, sessionId, ...saved, url: fileUrl(sessionId, saved.name) }, { status: 201 });
+  } catch (err) {
+    if (err.message === "Invalid filename") return Response.json({ error: "Invalid file name" }, { status: 400 });
+    if (err.message === "File exceeds 10MB limit") return Response.json({ error: err.message }, { status: 413 });
+    throw err;
+  }
+}
+
 export async function handleUploads(sessionId) {
   const dir = uploadDir(sessionId);
   try {
@@ -84,7 +148,7 @@ export async function handleUploads(sessionId) {
     const files = await Promise.all(entries.map(async (e) => {
       const f = Bun.file(`${dir}/${e.name}`), st = await f.stat();
       return { name: e.name, size: st.size, modified: st.mtime.toISOString(), type: f.type,
-        url: `/api/files?session=${encodeURIComponent(sessionId)}&file=${encodeURIComponent(e.name)}` };
+        url: fileUrl(sessionId, e.name) };
     }));
     return Response.json({ sessionId, files });
   } catch { return Response.json({ sessionId, files: [] }); }
