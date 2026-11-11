@@ -1,5 +1,14 @@
 import { state } from "./state.js";
 import { broadcast } from "./clients.js";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const { BT_TOKEN, BT_VIEW_TOKEN, ...shellEnv } = process.env;
+if (BT_TOKEN) {
+  shellEnv.BT_TOKEN_FILE = join(mkdtempSync(join(tmpdir(), "buntty-")), "token");
+  writeFileSync(shellEnv.BT_TOKEN_FILE, BT_TOKEN, { mode: 0o600 });
+}
 
 const MAX_HISTORY_LENGTH = 2_000_000;
 // Trim lazily: Bun concatenates strings as ropes, so slicing on every chunk would copy ~2MB per output event.
@@ -38,7 +47,7 @@ export function createSession(sessionId, clientId) {
       broadcast(sessionId, { type: "output", data: output }); },
     exit: (_, c, sig) => { if (session && state.sessions.get(sessionId) !== session) return; // stale exit from a replaced session
       broadcast(sessionId, { type: "exit", code: c, signal: sig }); broadcast(sessionId, { type: "session_ended" }); destroySession(sessionId); },
-  }, env: { ...process.env, TERM: "xterm-256color" } });
+  }, env: { ...shellEnv, TERM: "xterm-256color" } });
   const now = Date.now();
   session = { id: sessionId, terminal: proc.terminal, proc, controllerId: clientId, createdAt: now, lastActivity: now, history: pendingHistory,
     recording: [], recordingBytes: 0, recordingHeader: { version: 2, width: cols, height: rows, timestamp: Math.floor(now / 1000), env: { SHELL: process.env.SHELL || "bash", TERM: "xterm-256color" } } };

@@ -1,5 +1,6 @@
 #!/bin/bash
 B="${BUNTTY_URL:-http://localhost:3000}"
+[ -z "${BT_TOKEN:-}" ] && [ -r "${BT_TOKEN_FILE:-}" ] && BT_TOKEN=$(<"$BT_TOKEN_FILE")
 A=(); [ -n "${BT_TOKEN:-}" ] && A=(-H "Authorization: Bearer $BT_TOKEN")
 [ -z "$2" ] && echo "uso: bt-send <1-6> <comando>" && exit 1
 # Idempotent: spawns the shell if no browser has opened this session yet.

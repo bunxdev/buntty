@@ -4,6 +4,7 @@
 set -euo pipefail
 API="${BUNTTY_URL:-http://localhost:3000}/api"
 AUTH=()
+[ -z "${BT_TOKEN:-}" ] && [ -r "${BT_TOKEN_FILE:-}" ] && BT_TOKEN=$(<"$BT_TOKEN_FILE")
 [ -n "${BT_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer $BT_TOKEN")
 
 send() {
