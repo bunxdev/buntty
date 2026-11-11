@@ -3,7 +3,11 @@ services:
     image: debian:bookworm-slim
     container_name: dev
     hostname: dev
-    network_mode: "host"
+    ports:
+      - "3000:3000"
+    environment:
+      - BT_COLS=220
+      - BT_ROWS=50
     working_dir: /scripts
     volumes:
       - ./scripts:/scripts
