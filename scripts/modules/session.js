@@ -2,8 +2,22 @@ import { state } from "./state.js";
 import { broadcast } from "./clients.js";
 
 const MAX_HISTORY_LENGTH = 2_000_000;
-const MAX_RECORDING_EVENTS = 50_000;
-const appendHistory = (history, output) => (history + output).slice(-MAX_HISTORY_LENGTH);
+// Trim lazily: Bun concatenates strings as ropes, so slicing on every chunk would copy ~2MB per output event.
+const HISTORY_SLACK = 256_000;
+export const MAX_RECORDING_EVENTS = 50_000;
+export const MAX_RECORDING_BYTES = 50 * 1024 * 1024;
+const appendHistory = (history, output) => {
+  const h = history + output;
+  return h.length > MAX_HISTORY_LENGTH + HISTORY_SLACK ? h.slice(-MAX_HISTORY_LENGTH) : h;
+};
+
+// Append an asciicast v2 event; stops silently once the event or byte cap is hit (see recordingFull).
+export function recordEvent(session, type, data) {
+  if (recordingFull(session)) return;
+  session.recording.push([(Date.now() - session.createdAt) / 1000, type, data]);
+  session.recordingBytes += data.length;
+}
+export const recordingFull = (s) => s.recording.length >= MAX_RECORDING_EVENTS || s.recordingBytes >= MAX_RECORDING_BYTES;
 
 export function createSession(sessionId, clientId) {
   if (state.sessions.has(sessionId)) return state.sessions.get(sessionId);
@@ -13,13 +27,14 @@ export function createSession(sessionId, clientId) {
     data: (_, d) => { const output = d.toString(); if (!output) return;
       if (!session) return void (pendingHistory = appendHistory(pendingHistory, output));
       session.history = appendHistory(session.history, output);
-      if (session.recording.length < MAX_RECORDING_EVENTS) session.recording.push([(Date.now() - session.createdAt) / 1000, "o", output]);
+      recordEvent(session, "o", output);
       broadcast(sessionId, { type: "output", data: output }); },
-    exit: (_, c, sig) => { broadcast(sessionId, { type: "exit", code: c, signal: sig }); broadcast(sessionId, { type: "session_ended" }); destroySession(sessionId); },
+    exit: (_, c, sig) => { if (session && state.sessions.get(sessionId) !== session) return; // stale exit from a replaced session
+      broadcast(sessionId, { type: "exit", code: c, signal: sig }); broadcast(sessionId, { type: "session_ended" }); destroySession(sessionId); },
   }, env: { ...process.env, TERM: "xterm-256color" } });
   const now = Date.now();
   session = { id: sessionId, terminal: proc.terminal, proc, controllerId: clientId, createdAt: now, history: pendingHistory,
-    recording: [], recordingHeader: { version: 2, width: cols, height: rows, timestamp: Math.floor(now / 1000), env: { SHELL: process.env.SHELL || "bash", TERM: "xterm-256color" } } };
+    recording: [], recordingBytes: 0, recordingHeader: { version: 2, width: cols, height: rows, timestamp: Math.floor(now / 1000), env: { SHELL: process.env.SHELL || "bash", TERM: "xterm-256color" } } };
   state.sessions.set(sessionId, session);
   console.log(`[BunTTY] Session ${sessionId} created (PID: ${proc.pid}, recording: on)`);
   return session;

@@ -1,10 +1,14 @@
 import { state } from "./state.js";
-import { writeToSession } from "./session.js";
+import { writeToSession, recordEvent, recordingFull, MAX_RECORDING_EVENTS, MAX_RECORDING_BYTES } from "./session.js";
 import { getClientsForSession, broadcastControlChanged } from "./clients.js";
+import { uploadDir, uploadPath } from "./uploads.js";
 import { readdir } from "node:fs/promises";
-import { resolve, basename, extname } from "node:path";
 
-const UPLOAD_ROOT = "/tmp/buntty-uploads";
+const noSession = () => Response.json({ error: "No active session" }, { status: 404 });
+const liveSession = (id) => { const s = state.sessions.get(id); return s && !s.terminal.closed ? s : null; };
+const fileStem = (sessionId) => `buntty-${sessionId.replace(/[^a-zA-Z0-9_-]/g, "") || "root"}-${Date.now()}`;
+// RFC 6266: ASCII fallback plus UTF-8 filename* so non-ASCII names survive.
+const attachment = (name) => `attachment; filename="${name.replace(/[^\x20-\x7e]|["\\]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 
 export function handleStatus(sessionId) {
   const session = state.sessions.get(sessionId);
@@ -15,70 +19,71 @@ export function handleStatus(sessionId) {
 
 export function handleScreen(sessionId) {
   const session = state.sessions.get(sessionId);
-  if (!session) return Response.json({ error: "No active session" }, { status: 400 });
-  const history = session.history || "";
-  const last = history.slice(-4000);
-  return Response.json({ sessionId, screen: last });
+  if (!session) return noSession();
+  return Response.json({ sessionId, screen: (session.history || "").slice(-4000) });
 }
 
 export function handleDownload(sessionId) {
   const session = state.sessions.get(sessionId);
-  if (!session) return Response.json({ error: "No active session" }, { status: 400 });
-  const clean = (session.history || "").replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
-  return new Response(clean, { headers: {
-    "Content-Type": "text/plain; charset=utf-8",
-    "Content-Disposition": `attachment; filename="buntty-${sessionId.replace(/[^a-zA-Z0-9_-]/g, "")}-${Date.now()}.log"` } });
+  if (!session) return noSession();
+  return new Response(Bun.stripANSI(session.history || ""), { headers: {
+    "Content-Type": "text/plain; charset=utf-8", "Content-Disposition": attachment(`${fileStem(sessionId)}.log`) } });
 }
 
 export async function handleInput(req, sessionId) {
   const body = await req.json().catch(() => null);
-  return !body?.data ? Response.json({ error: "Missing data" }, { status: 400 })
-    : !state.sessions.get(sessionId) || state.sessions.get(sessionId).terminal.closed ? Response.json({ error: "No active session" }, { status: 400 })
-    : (writeToSession(sessionId, body.data), Response.json({ ok: true, sessionId }));
+  if (typeof body?.data !== "string" || !body.data) return Response.json({ error: "Missing data (non-empty string)" }, { status: 400 });
+  const session = liveSession(sessionId);
+  if (!session) return noSession();
+  writeToSession(sessionId, body.data);
+  recordEvent(session, "i", body.data);
+  return Response.json({ ok: true, sessionId });
 }
 
 export function handleTakeControl(sessionId) {
   const session = state.sessions.get(sessionId);
-  return !session ? Response.json({ error: "No active session" }, { status: 400 })
-    : (session.controllerId = 0, broadcastControlChanged(sessionId, 0, "AI"), Response.json({ ok: true, sessionId, controllerId: 0 }));
+  if (!session) return noSession();
+  session.controllerId = 0;
+  broadcastControlChanged(sessionId, 0, "AI");
+  return Response.json({ ok: true, sessionId, controllerId: 0 });
 }
 
 export async function handleUploads(sessionId) {
-  const dir = resolve(UPLOAD_ROOT, sessionId.replace(/^\//, "") || "default");
+  const dir = uploadDir(sessionId);
   try {
-    const files = await readdir(dir);
-    return Response.json({ sessionId, files: files.map(f => ({ name: f, url: `/api/files?session=${encodeURIComponent(sessionId)}&file=${encodeURIComponent(f)}` })) });
+    const entries = (await readdir(dir, { withFileTypes: true })).filter(e => e.isFile());
+    const files = await Promise.all(entries.map(async (e) => {
+      const f = Bun.file(`${dir}/${e.name}`), st = await f.stat();
+      return { name: e.name, size: st.size, modified: st.mtime.toISOString(), type: f.type,
+        url: `/api/files?session=${encodeURIComponent(sessionId)}&file=${encodeURIComponent(e.name)}` };
+    }));
+    return Response.json({ sessionId, files });
   } catch { return Response.json({ sessionId, files: [] }); }
 }
 
 export function handleRecording(sessionId) {
   const session = state.sessions.get(sessionId);
-  if (!session) return Response.json({ error: "No active session" }, { status: 400 });
-  const lines = [JSON.stringify(session.recordingHeader)];
-  for (const ev of session.recording) lines.push(JSON.stringify(ev));
-  const cast = lines.join("\n") + "\n";
+  if (!session) return noSession();
+  let cast = JSON.stringify(session.recordingHeader) + "\n";
+  for (const ev of session.recording) cast += JSON.stringify(ev) + "\n";
   return new Response(cast, { headers: {
-    "Content-Type": "application/x-asciicast",
-    "Content-Disposition": `attachment; filename="buntty-${sessionId.replace(/[^a-zA-Z0-9_-]/g, "")}-${Date.now()}.cast"` } });
+    "Content-Type": "application/x-asciicast", "Content-Disposition": attachment(`${fileStem(sessionId)}.cast`) } });
 }
 
 export function handleRecordingStatus(sessionId) {
   const session = state.sessions.get(sessionId);
-  if (!session) return Response.json({ error: "No active session" }, { status: 400 });
-  const elapsed = (Date.now() - session.createdAt) / 1000;
-  return Response.json({ sessionId, recording: true, events: session.recording.length, elapsed: Math.round(elapsed), maxEvents: 50000 });
+  if (!session) return noSession();
+  const full = recordingFull(session);
+  return Response.json({ sessionId, recording: !full, truncated: full, events: session.recording.length, bytes: session.recordingBytes,
+    elapsed: Math.round((Date.now() - session.createdAt) / 1000), maxEvents: MAX_RECORDING_EVENTS, maxBytes: MAX_RECORDING_BYTES });
 }
 
 export async function handleFileDownload(sessionId, fileName) {
   if (!fileName) return Response.json({ error: "Missing file parameter" }, { status: 400 });
-  const safeName = basename(fileName);
-  const dir = resolve(UPLOAD_ROOT, sessionId.replace(/^\//, "") || "default");
-  const filePath = resolve(dir, safeName);
-  if (!filePath.startsWith(UPLOAD_ROOT)) return Response.json({ error: "Access denied" }, { status: 403 });
-  const file = Bun.file(filePath);
+  const target = uploadPath(sessionId, fileName);
+  if (!target) return Response.json({ error: "Invalid file name" }, { status: 400 });
+  const file = Bun.file(target.path);
   if (!await file.exists()) return Response.json({ error: "File not found" }, { status: 404 });
-  const ext = extname(safeName).toLowerCase();
-  const types = { ".txt": "text/plain", ".json": "application/json", ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".gif": "image/gif", ".pdf": "application/pdf" };
-  const cleanName = safeName.replace(/"/g, "");
-  return new Response(file, { headers: { "Content-Type": types[ext] || "application/octet-stream", "Content-Disposition": `attachment; filename="${cleanName}"` } });
+  // Bun infers Content-Type from the extension; attachment + nosniff keeps HTML/JS from rendering inline.
+  return new Response(file, { headers: { "Content-Disposition": attachment(target.name) } });
 }

@@ -5,6 +5,6 @@ export const state = {
 };
 
 export function normalizeSessionId(value = "/") {
-  const id = String(value || "/").trim().replace(/^\/+|\/+$/g, "");
+  const id = String(value || "/").trim().replace(/^\/+|\/+$/g, "").slice(0, 128);
   return id ? `/${id}` : "/";
 }
